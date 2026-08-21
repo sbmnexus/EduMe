@@ -49,6 +49,10 @@ const examSubjects = {
 
 const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+function EduMeLogo({ className = '' }) {
+  return <img className={`brand-mark ${className}`.trim()} src="/icon.svg" alt="EduMe" />;
+}
+
 function makeId(prefix = 'id') {
   return `${prefix}-${Math.random().toString(36).slice(2, 9)}-${Date.now().toString(36)}`;
 }
@@ -320,6 +324,7 @@ function App() {
   const [calendarDate, setCalendarDate] = useState(getCurrentDateKey());
   const [selectedNav, setSelectedNav] = useState('home');
   const [currentDateKey, setCurrentDateKey] = useState(getCurrentDateKey());
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const intervalRef = useRef(null);
 
   const todayTasks = useMemo(() => getTodayTasks(tasks), [tasks]);
@@ -1205,7 +1210,6 @@ function App() {
                 }}
               />
             </div>
-            <button className="secondary-btn" onClick={enableNotifications}>Enable Notifications</button>
           </div>
 
           <div className="card settings-card" style={{ padding: 16 }}>
@@ -1616,7 +1620,7 @@ function App() {
       <div className="card inset-panel">
         <div className="section-header"><h2>About EduMe</h2></div>
         <div style={{ display: 'grid', gap: 16 }}>
-          <div className="brand"><span className="brand-mark">E</span> <span className="highlight-text">EduMe</span></div>
+          <div className="brand"><EduMeLogo /> <span className="highlight-text">EduMe</span></div>
           <p className="muted" style={{ margin: 0 }}>Your simple study companion.</p>
           <p style={{ margin: 0 }}>EduMe is a student-focused study companion designed to help students organize their studies, plan tasks, track study time, monitor progress, and stay motivated.</p>
           <div className="card info-card" style={{ padding: 16 }}>
@@ -1733,7 +1737,7 @@ function App() {
     <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 20 }}>
       <div className="card" style={{ maxWidth: 760, width: '100%', padding: 22 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <div className="brand"><span className="brand-mark">E</span> <span>EduMe</span></div>
+          <div className="brand"><EduMeLogo /> <span>EduMe</span></div>
           <span className="badge">Onboarding</span>
         </div>
         <div style={{ display: 'grid', gap: 16 }}>
@@ -1768,8 +1772,16 @@ function App() {
       {showOnboarding ? renderOnboarding() : (
         <div className="app-shell">
           <header className="topbar">
-            <div className="brand"><span className="brand-mark">E</span> <span>EduMe</span></div>
+            <div className="brand"><EduMeLogo /> <span>EduMe</span></div>
             <div className="topbar-actions">
+              <button
+                className="icon-btn mobile-menu-toggle"
+                onClick={() => setMobileMenuOpen((current) => !current)}
+                aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+                aria-expanded={mobileMenuOpen}
+              >
+                <span className="menu-glyph" aria-hidden="true"><i /><i /><i /></span>
+              </button>
               <button
                 className="icon-btn theme-toggle"
                 onClick={() => setTheme((current) => current === 'dark' ? 'light' : current === 'light' ? 'system' : 'dark')}
@@ -1784,7 +1796,7 @@ function App() {
           <div className="main-layout">
             <aside className="desktop-sidebar">
               <div className="card inset-panel">
-                <div className="brand" style={{ marginBottom: 14 }}><span className="brand-mark">E</span> <span>EduMe</span></div>
+                <div className="brand" style={{ marginBottom: 14 }}><EduMeLogo /> <span>EduMe</span></div>
                 <div className="nav-row" style={{ display: 'grid', gap: 8 }}>
                   {navItems.map((item) => (
                     <button
@@ -1822,12 +1834,13 @@ function App() {
             </main>
           </div>
 
-          <nav className="mobile-nav" aria-label="Mobile navigation">
+          <div className={`mobile-menu-backdrop ${mobileMenuOpen ? 'open' : ''}`} onClick={() => setMobileMenuOpen(false)} />
+          <nav className={`mobile-nav ${mobileMenuOpen ? 'open' : ''}`} aria-label="Mobile navigation">
             {navItems.map((item) => (
               <button
                 key={item.id}
                 className={selectedNav === item.id ? 'nav-item active' : 'nav-item'}
-                onClick={() => { setPage(item.id); setSelectedNav(item.id); }}
+                onClick={() => { setPage(item.id); setSelectedNav(item.id); setMobileMenuOpen(false); }}
               >
                 <span>{item.icon}</span>
                 <span>{item.label}</span>
