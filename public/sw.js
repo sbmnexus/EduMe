@@ -1,4 +1,4 @@
-const CACHE_NAME = 'EduMe-v4';
+const CACHE_NAME = 'EduMe-v5';
 const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icon.svg', '/questions.json'];
 
 self.addEventListener('install', (event) => {

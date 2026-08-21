@@ -7,6 +7,7 @@ const STORAGE_KEYS = {
   goals: 'edume_goals',
   sessions: 'edume_sessions',
   settings: 'edume_settings',
+  notificationLastShown: 'edume_notification_last_shown',
   theme: 'edume_theme',
   streak: 'edume_streak',
   quizHistory: 'edume_quiz_history',
@@ -37,7 +38,6 @@ const navItems = [
   { id: 'progress', label: 'Progress', icon: '📊' },
   { id: 'profile', label: 'Profile', icon: '👤' },
   { id: 'settings', label: 'Settings', icon: '⚙️' },
-  { id: 'support', label: 'Support', icon: '💬' },
   { id: 'about', label: 'About', icon: 'ℹ️' },
 ];
 
@@ -174,11 +174,33 @@ function getTodayTasks(tasks) {
   return tasks.filter((task) => task.date === key);
 }
 
+function getDueTasks(tasks) {
+  const today = new Date(`${getCurrentDateKey()}T00:00:00`);
+  return [...tasks]
+    .filter((task) => !task.completed && task.date && new Date(`${task.date}T00:00:00`) <= today)
+    .sort((a, b) => new Date(`${a.date}T00:00:00`) - new Date(`${b.date}T00:00:00`));
+}
+
 function getUpcomingTasks(tasks) {
   const now = new Date();
   return [...tasks]
     .filter((task) => new Date(task.date + 'T00:00:00') >= new Date(now.toDateString()))
     .sort((a, b) => new Date(a.date + 'T00:00:00') - new Date(b.date + 'T00:00:00'));
+}
+
+function getExamDaysRemaining(examDate) {
+  if (!examDate) return null;
+  const exam = new Date(`${examDate}T00:00:00`);
+  const today = new Date(`${getCurrentDateKey()}T00:00:00`);
+  if (Number.isNaN(exam.getTime())) return null;
+  return Math.ceil((exam - today) / (1000 * 60 * 60 * 24));
+}
+
+function getWeakSubjectNames(value) {
+  return String(value || '')
+    .split(',')
+    .map((subject) => subject.trim().toLowerCase())
+    .filter(Boolean);
 }
 
 function calculateDailyStudyMinutes(sessions) {
@@ -297,10 +319,18 @@ function App() {
   const [fullScreen, setFullScreen] = useState(false);
   const [calendarDate, setCalendarDate] = useState(getCurrentDateKey());
   const [selectedNav, setSelectedNav] = useState('home');
+  const [currentDateKey, setCurrentDateKey] = useState(getCurrentDateKey());
   const intervalRef = useRef(null);
 
   const todayTasks = useMemo(() => getTodayTasks(tasks), [tasks]);
+  const dueTasks = useMemo(() => getDueTasks(tasks), [tasks, currentDateKey]);
   const upcomingTasks = useMemo(() => getUpcomingTasks(tasks), [tasks]);
+  const weakSubjects = useMemo(() => getWeakSubjectNames(profile.weakSubjects), [profile.weakSubjects]);
+  const weakSubjectTasks = useMemo(
+    () => tasks.filter((task) => !task.completed && weakSubjects.includes(String(task.subject || '').trim().toLowerCase())),
+    [tasks, weakSubjects],
+  );
+  const examDaysRemaining = useMemo(() => getExamDaysRemaining(profile.examDate), [profile.examDate, currentDateKey]);
   const todaysMinutes = useMemo(() => calculateDailyStudyMinutes(sessions), [sessions]);
   const streak = useMemo(() => calculateStreak(tasks, sessions), [tasks, sessions]);
   const activeGoals = useMemo(() => goals.filter((g) => !g.completed), [goals]);
@@ -373,6 +403,31 @@ function App() {
   useEffect(() => {
     writeStorage(STORAGE_KEYS.settings, settings);
   }, [settings]);
+
+  useEffect(() => {
+    const dayRefresh = setInterval(() => setCurrentDateKey(getCurrentDateKey()), 60 * 1000);
+    return () => clearInterval(dayRefresh);
+  }, []);
+
+  useEffect(() => {
+    if (!settings.notificationReminder || !('Notification' in window) || Notification.permission !== 'granted') return undefined;
+
+    const sendReminder = () => {
+      const today = getCurrentDateKey();
+      if (readStorage(STORAGE_KEYS.notificationLastShown, '') === today) return;
+      const examNotice = examDaysRemaining !== null && examDaysRemaining >= 0 && examDaysRemaining <= 7
+        ? ` ${profile.targetExam || 'Exam'} is in ${examDaysRemaining} day${examDaysRemaining === 1 ? '' : 's'}.`
+        : '';
+      if (!dueTasks.length && !examNotice) return;
+      const taskNotice = dueTasks.length ? `${dueTasks.length} due study task${dueTasks.length === 1 ? '' : 's'}.` : '';
+      new Notification('EduMe Study Reminder', { body: `${taskNotice}${examNotice}`, icon: '/icon.svg' });
+      writeStorage(STORAGE_KEYS.notificationLastShown, today);
+    };
+
+    sendReminder();
+    const reminderInterval = setInterval(sendReminder, 60 * 1000);
+    return () => clearInterval(reminderInterval);
+  }, [settings.notificationReminder, dueTasks, examDaysRemaining, profile.targetExam]);
 
   useEffect(() => {
     writeStorage(STORAGE_KEYS.theme, theme);
@@ -477,6 +532,20 @@ function App() {
       triggerToast('✓ Support email copied');
     } catch {
       triggerToast('Copy is unavailable in this browser.');
+    }
+  };
+
+  const enableNotifications = async () => {
+    if (!('Notification' in window)) {
+      triggerToast('Notifications are not supported in this browser.');
+      return;
+    }
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      setSettings((current) => ({ ...current, notificationReminder: true }));
+      triggerToast('✓ Notifications enabled');
+    } else {
+      triggerToast('Please allow notifications in browser settings.');
     }
   };
 
@@ -789,6 +858,29 @@ function App() {
 
       {renderTimerCard()}
 
+      <div className="home-overview-grid">
+        <div className="card home-focus-panel">
+          <div className="section-header"><div><span className="section-kicker">PRIORITY</span><h2>Weak Subject Focus</h2></div><span className="badge">{weakSubjects.length}</span></div>
+          {weakSubjects.length === 0 ? (
+            <div className="empty-state">Add weak subjects in Profile to get a focused study reminder.</div>
+          ) : (
+            <>
+              <p className="muted" style={{ marginTop: 0 }}>Aaj in subjects par extra dhyan do.</p>
+              <div className="focus-subject-list">{weakSubjects.map((subject) => <span className="focus-subject" key={subject}>{subject}</span>)}</div>
+              {weakSubjectTasks.length > 0 && <p className="focus-task-hint">{weakSubjectTasks.length} related task{weakSubjectTasks.length === 1 ? '' : 's'} pending</p>}
+            </>
+          )}
+        </div>
+        <div className="card exam-countdown-panel">
+          <div className="section-header"><div><span className="section-kicker">EXAM COUNTDOWN</span><h2>{profile.targetExam || 'Target Exam'}</h2></div><span className="badge">{profile.examDate ? formatShortDate(profile.examDate) : 'Set date'}</span></div>
+          {examDaysRemaining === null ? (
+            <div className="empty-state">Profile me exam date fill karo to countdown yahan dikhega.</div>
+          ) : (
+            <div className="countdown-value"><strong>{Math.max(0, examDaysRemaining)}</strong><span>{examDaysRemaining < 0 ? 'days passed' : examDaysRemaining === 1 ? 'day left' : 'days left'}</span></div>
+          )}
+        </div>
+      </div>
+
       <div className="home-grid">
         <div className="stack">
           <div className="card stat-card home-panel-goal">
@@ -815,14 +907,14 @@ function App() {
 
           <div className="card list-card home-panel-tasks">
             <div className="section-header">
-              <h2>Today&apos;s Tasks</h2>
+              <h2>Due Tasks</h2>
               <button className="ghost-btn" onClick={() => setPage('planner')}>View all</button>
             </div>
-            {todayTasks.length === 0 ? (
-              <div className="empty-state">No tasks planned yet. Add your first study task.</div>
+            {dueTasks.length === 0 ? (
+              <div className="empty-state">No pending due tasks. Keep planning ahead.</div>
             ) : (
               <div>
-                {todayTasks.map((task) => (
+                {dueTasks.map((task) => (
                   <div className="task-item" key={task.id}>
                     <div className="task-main">
                       <button
@@ -832,7 +924,7 @@ function App() {
                       />
                       <div>
                         <div style={{ fontWeight: 700 }}>{task.name}</div>
-                        <div className="muted">{task.subject} · {task.topic || 'General'}</div>
+                        <div className="muted">{task.subject} · {task.topic || 'General'} · {task.date === getCurrentDateKey() ? 'Today' : formatShortDate(task.date)}</div>
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
@@ -848,13 +940,13 @@ function App() {
         <div className="stack">
           <div className="card list-card home-panel-reminders">
             <div className="section-header">
-              <h3>Reminders</h3>
+              <h3>Study Reminders</h3>
             </div>
-            {upcomingTasks.length === 0 ? (
-              <div className="empty-state">No reminders for today.</div>
+            {upcomingTasks.length === 0 && examDaysRemaining === null ? (
+              <div className="empty-state">No upcoming study or exam reminders.</div>
             ) : (
               <div>
-                {upcomingTasks.slice(0, 3).map((task) => (
+                {upcomingTasks.slice(0, 5).map((task) => (
                   <div key={task.id} className="task-item">
                     <div>
                       <strong>{task.name}</strong>
@@ -863,6 +955,7 @@ function App() {
                     <span className="badge">{formatShortDate(task.date)}</span>
                   </div>
                 ))}
+                {examDaysRemaining !== null && examDaysRemaining >= 0 && <div className="task-item exam-reminder"><div><strong>{profile.targetExam || 'Exam'} nearby</strong><div className="muted">{examDaysRemaining} day{examDaysRemaining === 1 ? '' : 's'} left · {formatShortDate(profile.examDate)}</div></div><span className="badge">Focus</span></div>}
               </div>
             )}
           </div>
@@ -1101,8 +1194,18 @@ function App() {
             </div>
             <div className="task-item" style={{ paddingTop: 0 }}>
               <span>Notification Reminder</span>
-              <ToggleSwitch enabled={settings.notificationReminder} onToggle={() => setSettings((current) => ({ ...current, notificationReminder: !current.notificationReminder }))} />
+              <ToggleSwitch
+                enabled={settings.notificationReminder}
+                onToggle={() => {
+                  if (!settings.notificationReminder) {
+                    enableNotifications();
+                    return;
+                  }
+                  setSettings((current) => ({ ...current, notificationReminder: false }));
+                }}
+              />
             </div>
+            <button className="secondary-btn" onClick={enableNotifications}>Enable Notifications</button>
           </div>
 
           <div className="card settings-card" style={{ padding: 16 }}>
@@ -1528,6 +1631,22 @@ function App() {
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button className="secondary-btn" onClick={() => setPage('terms')}>Terms & Conditions</button>
             <button className="secondary-btn" onClick={() => setPage('privacy')}>Privacy Policy</button>
+          </div>
+          <div className="about-support-section">
+            <div className="section-header"><div><span className="section-kicker">NEED A HAND?</span><h3>Support</h3></div></div>
+            <p className="muted">Copy the email or send feedback whenever you need help.</p>
+            <div className="support-contact-card">
+              <div><span className="muted support-label">Support email</span><strong className="support-email">sbmplayerzofficial@gmail.com</strong></div>
+              <button className="secondary-btn" onClick={copySupportEmail}>Copy Email</button>
+            </div>
+            <a
+              className="secondary-btn"
+              href="https://docs.google.com/forms/d/e/1FAIpQLSdqB36cDFQygtQrQnnmmutrlWfjb1j0tX-Z6Ad2kA4Z2dnqcw/viewform?usp=sharing&ouid=102268797773322480668"
+              target="_blank"
+              rel="noreferrer"
+            >
+              📝 Send Feedback
+            </a>
           </div>
         </div>
       </div>

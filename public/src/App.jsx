@@ -38,7 +38,6 @@ const navItems = [
   { id: 'progress', label: 'Progress', icon: '📊' },
   { id: 'profile', label: 'Profile', icon: '👤' },
   { id: 'settings', label: 'Settings', icon: '⚙️' },
-  { id: 'support', label: 'Support', icon: '💬' },
   { id: 'about', label: 'About', icon: 'ℹ️' },
 ];
 
@@ -49,6 +48,10 @@ const examSubjects = {
 };
 
 const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function EduMeLogo({ className = '' }) {
+  return <img className={`brand-mark ${className}`.trim()} src="/icon.svg" alt="EduMe" />;
+}
 
 function makeId(prefix = 'id') {
   return `${prefix}-${Math.random().toString(36).slice(2, 9)}-${Date.now().toString(36)}`;
@@ -175,11 +178,30 @@ function getTodayTasks(tasks) {
   return tasks.filter((task) => task.date === key);
 }
 
+function getDueTasks(tasks) {
+  const today = new Date(`${getCurrentDateKey()}T00:00:00`);
+  return [...tasks]
+    .filter((task) => !task.completed && task.date && new Date(`${task.date}T00:00:00`) <= today)
+    .sort((a, b) => new Date(`${a.date}T00:00:00`) - new Date(`${b.date}T00:00:00`));
+}
+
 function getUpcomingTasks(tasks) {
   const now = new Date();
   return [...tasks]
     .filter((task) => new Date(task.date + 'T00:00:00') >= new Date(now.toDateString()))
     .sort((a, b) => new Date(a.date + 'T00:00:00') - new Date(b.date + 'T00:00:00'));
+}
+
+function getExamDaysRemaining(examDate) {
+  if (!examDate) return null;
+  const exam = new Date(`${examDate}T00:00:00`);
+  const today = new Date(`${getCurrentDateKey()}T00:00:00`);
+  if (Number.isNaN(exam.getTime())) return null;
+  return Math.ceil((exam - today) / (1000 * 60 * 60 * 24));
+}
+
+function getWeakSubjectNames(value) {
+  return String(value || '').split(',').map((subject) => subject.trim().toLowerCase()).filter(Boolean);
 }
 
 function calculateDailyStudyMinutes(sessions) {
@@ -298,10 +320,16 @@ function App() {
   const [fullScreen, setFullScreen] = useState(false);
   const [calendarDate, setCalendarDate] = useState(getCurrentDateKey());
   const [selectedNav, setSelectedNav] = useState('home');
+  const [currentDateKey, setCurrentDateKey] = useState(getCurrentDateKey());
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const intervalRef = useRef(null);
 
   const todayTasks = useMemo(() => getTodayTasks(tasks), [tasks]);
+  const dueTasks = useMemo(() => getDueTasks(tasks), [tasks, currentDateKey]);
   const upcomingTasks = useMemo(() => getUpcomingTasks(tasks), [tasks]);
+  const weakSubjects = useMemo(() => getWeakSubjectNames(profile.weakSubjects), [profile.weakSubjects]);
+  const weakSubjectTasks = useMemo(() => tasks.filter((task) => !task.completed && weakSubjects.includes(String(task.subject || '').trim().toLowerCase())), [tasks, weakSubjects]);
+  const examDaysRemaining = useMemo(() => getExamDaysRemaining(profile.examDate), [profile.examDate, currentDateKey]);
   const todaysMinutes = useMemo(() => calculateDailyStudyMinutes(sessions), [sessions]);
   const streak = useMemo(() => calculateStreak(tasks, sessions), [tasks, sessions]);
   const activeGoals = useMemo(() => goals.filter((g) => !g.completed), [goals]);
@@ -376,15 +404,22 @@ function App() {
   }, [settings]);
 
   useEffect(() => {
+    const dayRefresh = setInterval(() => setCurrentDateKey(getCurrentDateKey()), 60 * 1000);
+    return () => clearInterval(dayRefresh);
+  }, []);
+
+  useEffect(() => {
     if (!settings.notificationReminder || !('Notification' in window) || Notification.permission !== 'granted') return undefined;
 
     const sendDailyReminder = () => {
       const today = getCurrentDateKey();
-      const pendingTasks = getTodayTasks(tasks).filter((task) => !task.completed);
-      if (!pendingTasks.length || readStorage(STORAGE_KEYS.notificationLastShown, '') === today) return;
+      const examNotice = examDaysRemaining !== null && examDaysRemaining >= 0 && examDaysRemaining <= 7
+        ? ` ${profile.targetExam || 'Exam'} is in ${examDaysRemaining} day${examDaysRemaining === 1 ? '' : 's'}.`
+        : '';
+      if ((!dueTasks.length && !examNotice) || readStorage(STORAGE_KEYS.notificationLastShown, '') === today) return;
 
       new Notification('EduMe Study Reminder', {
-        body: `${pendingTasks.length} study task${pendingTasks.length === 1 ? '' : 's'} planned for today.`,
+        body: `${dueTasks.length ? `${dueTasks.length} due study task${dueTasks.length === 1 ? '' : 's'}.` : ''}${examNotice}`,
         icon: '/icon.svg',
       });
       writeStorage(STORAGE_KEYS.notificationLastShown, today);
@@ -393,7 +428,7 @@ function App() {
     sendDailyReminder();
     const reminderInterval = setInterval(sendDailyReminder, 60 * 1000);
     return () => clearInterval(reminderInterval);
-  }, [settings.notificationReminder, tasks]);
+  }, [settings.notificationReminder, dueTasks, examDaysRemaining, profile.targetExam]);
 
   useEffect(() => {
     writeStorage(STORAGE_KEYS.theme, theme);
@@ -826,6 +861,17 @@ function App() {
 
       {renderTimerCard()}
 
+      <div className="home-overview-grid">
+        <div className="card home-focus-panel">
+          <div className="section-header"><div><span className="section-kicker">PRIORITY</span><h2>Weak Subject Focus</h2></div><span className="badge">{weakSubjects.length}</span></div>
+          {weakSubjects.length === 0 ? <div className="empty-state">Add weak subjects in Profile to get a focused study reminder.</div> : <><p className="muted" style={{ marginTop: 0 }}>Aaj in subjects par extra dhyan do.</p><div className="focus-subject-list">{weakSubjects.map((subject) => <span className="focus-subject" key={subject}>{subject}</span>)}</div>{weakSubjectTasks.length > 0 && <p className="focus-task-hint">{weakSubjectTasks.length} related task{weakSubjectTasks.length === 1 ? '' : 's'} pending</p>}</>}
+        </div>
+        <div className="card exam-countdown-panel">
+          <div className="section-header"><div><span className="section-kicker">EXAM COUNTDOWN</span><h2>{profile.targetExam || 'Target Exam'}</h2></div><span className="badge">{profile.examDate ? formatShortDate(profile.examDate) : 'Set date'}</span></div>
+          {examDaysRemaining === null ? <div className="empty-state">Profile me exam date fill karo to countdown yahan dikhega.</div> : <div className="countdown-value"><strong>{Math.max(0, examDaysRemaining)}</strong><span>{examDaysRemaining < 0 ? 'days passed' : examDaysRemaining === 1 ? 'day left' : 'days left'}</span></div>}
+        </div>
+      </div>
+
       <div className="home-grid">
         <div className="stack">
           <div className="card stat-card home-panel-goal">
@@ -852,14 +898,14 @@ function App() {
 
           <div className="card list-card home-panel-tasks">
             <div className="section-header">
-              <h2>Today&apos;s Tasks</h2>
+              <h2>Due Tasks</h2>
               <button className="ghost-btn" onClick={() => setPage('planner')}>View all</button>
             </div>
-            {todayTasks.length === 0 ? (
-              <div className="empty-state">No tasks planned yet. Add your first study task.</div>
+            {dueTasks.length === 0 ? (
+              <div className="empty-state">No pending due tasks. Keep planning ahead.</div>
             ) : (
               <div>
-                {todayTasks.map((task) => (
+                {dueTasks.map((task) => (
                   <div className="task-item" key={task.id}>
                     <div className="task-main">
                       <button
@@ -869,7 +915,7 @@ function App() {
                       />
                       <div>
                         <div style={{ fontWeight: 700 }}>{task.name}</div>
-                        <div className="muted">{task.subject} · {task.topic || 'General'}</div>
+                        <div className="muted">{task.subject} · {task.topic || 'General'} · {task.date === getCurrentDateKey() ? 'Today' : formatShortDate(task.date)}</div>
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
@@ -885,13 +931,13 @@ function App() {
         <div className="stack">
           <div className="card list-card home-panel-reminders">
             <div className="section-header">
-              <h3>Reminders</h3>
+              <h3>Study Reminders</h3>
             </div>
-            {upcomingTasks.length === 0 ? (
-              <div className="empty-state">No reminders for today.</div>
+            {upcomingTasks.length === 0 && examDaysRemaining === null ? (
+              <div className="empty-state">No upcoming study or exam reminders.</div>
             ) : (
               <div>
-                {upcomingTasks.slice(0, 3).map((task) => (
+                {upcomingTasks.slice(0, 5).map((task) => (
                   <div key={task.id} className="task-item">
                     <div>
                       <strong>{task.name}</strong>
@@ -900,6 +946,7 @@ function App() {
                     <span className="badge">{formatShortDate(task.date)}</span>
                   </div>
                 ))}
+                {examDaysRemaining !== null && examDaysRemaining >= 0 && <div className="task-item exam-reminder"><div><strong>{profile.targetExam || 'Exam'} nearby</strong><div className="muted">{examDaysRemaining} day{examDaysRemaining === 1 ? '' : 's'} left · {formatShortDate(profile.examDate)}</div></div><span className="badge">Focus</span></div>}
               </div>
             )}
           </div>
@@ -1149,7 +1196,6 @@ function App() {
                 }}
               />
             </div>
-            <button className="secondary-btn" onClick={enableNotifications}>Enable Notifications</button>
           </div>
 
           <div className="card settings-card" style={{ padding: 16 }}>
@@ -1560,7 +1606,7 @@ function App() {
       <div className="card inset-panel">
         <div className="section-header"><h2>About EduMe</h2></div>
         <div style={{ display: 'grid', gap: 16 }}>
-          <div className="brand"><span className="brand-mark">E</span> <span className="highlight-text">EduMe</span></div>
+          <div className="brand"><EduMeLogo /> <span className="highlight-text">EduMe</span></div>
           <p className="muted" style={{ margin: 0 }}>Your simple study companion.</p>
           <p style={{ margin: 0 }}>EduMe is a student-focused study companion designed to help students organize their studies, plan tasks, track study time, monitor progress, and stay motivated.</p>
           <div className="card info-card" style={{ padding: 16 }}>
@@ -1575,6 +1621,15 @@ function App() {
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button className="secondary-btn" onClick={() => setPage('terms')}>Terms & Conditions</button>
             <button className="secondary-btn" onClick={() => setPage('privacy')}>Privacy Policy</button>
+          </div>
+          <div className="about-support-section">
+            <div className="section-header"><div><span className="section-kicker">NEED A HAND?</span><h3>Support</h3></div></div>
+            <p className="muted">Copy the email or send feedback whenever you need help.</p>
+            <div className="support-contact-card">
+              <div><span className="muted support-label">Support email</span><strong className="support-email">sbmplayerzofficial@gmail.com</strong></div>
+              <button className="secondary-btn" onClick={copySupportEmail}>Copy Email</button>
+            </div>
+            <a className="secondary-btn" href="https://docs.google.com/forms/d/e/1FAIpQLSdqB36cDFQygtQrQnnmmutrlWfjb1j0tX-Z6Ad2kA4Z2dnqcw/viewform?usp=sharing&ouid=102268797773322480668" target="_blank" rel="noreferrer">📝 Send Feedback</a>
           </div>
         </div>
       </div>
@@ -1661,7 +1716,7 @@ function App() {
     <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 20 }}>
       <div className="card" style={{ maxWidth: 760, width: '100%', padding: 22 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <div className="brand"><span className="brand-mark">E</span> <span>EduMe</span></div>
+          <div className="brand"><EduMeLogo /> <span>EduMe</span></div>
           <span className="badge">Onboarding</span>
         </div>
         <div style={{ display: 'grid', gap: 16 }}>
@@ -1696,8 +1751,16 @@ function App() {
       {showOnboarding ? renderOnboarding() : (
         <div className="app-shell">
           <header className="topbar">
-            <div className="brand"><span className="brand-mark">E</span> <span>EduMe</span></div>
+            <div className="brand"><EduMeLogo /> <span>EduMe</span></div>
             <div className="topbar-actions">
+              <button
+                className="icon-btn mobile-menu-toggle"
+                onClick={() => setMobileMenuOpen((current) => !current)}
+                aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+                aria-expanded={mobileMenuOpen}
+              >
+                <span className="menu-glyph" aria-hidden="true"><i /><i /><i /></span>
+              </button>
               <button
                 className="icon-btn theme-toggle"
                 onClick={() => setTheme((current) => current === 'dark' ? 'light' : current === 'light' ? 'system' : 'dark')}
@@ -1712,7 +1775,7 @@ function App() {
           <div className="main-layout">
             <aside className="desktop-sidebar">
               <div className="card inset-panel">
-                <div className="brand" style={{ marginBottom: 14 }}><span className="brand-mark">E</span> <span>EduMe</span></div>
+                <div className="brand" style={{ marginBottom: 14 }}><EduMeLogo /> <span>EduMe</span></div>
                 <div className="nav-row" style={{ display: 'grid', gap: 8 }}>
                   {navItems.map((item) => (
                     <button
@@ -1750,12 +1813,13 @@ function App() {
             </main>
           </div>
 
-          <nav className="mobile-nav" aria-label="Mobile navigation">
+          <div className={`mobile-menu-backdrop ${mobileMenuOpen ? 'open' : ''}`} onClick={() => setMobileMenuOpen(false)} />
+          <nav className={`mobile-nav ${mobileMenuOpen ? 'open' : ''}`} aria-label="Mobile navigation">
             {navItems.map((item) => (
               <button
                 key={item.id}
                 className={selectedNav === item.id ? 'nav-item active' : 'nav-item'}
-                onClick={() => { setPage(item.id); setSelectedNav(item.id); }}
+                onClick={() => { setPage(item.id); setSelectedNav(item.id); setMobileMenuOpen(false); }}
               >
                 <span>{item.icon}</span>
                 <span>{item.label}</span>
