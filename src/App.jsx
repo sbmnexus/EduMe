@@ -421,7 +421,7 @@ function App() {
       const today = getCurrentDateKey();
       if (readStorage(STORAGE_KEYS.notificationLastShown, '') === today) return;
       const examNotice = examDaysRemaining !== null && examDaysRemaining >= 0 && examDaysRemaining <= 7
-        ? ` ${profile.targetExam || 'Exam'} is in ${examDaysRemaining} day${examDaysRemaining === 1 ? '' : 's'}.`
+        ? ` Exam in ${examDaysRemaining} day${examDaysRemaining === 1 ? '' : 's'}.`
         : '';
       if (!dueTasks.length && !examNotice) return;
       const taskNotice = dueTasks.length ? `${dueTasks.length} due study task${dueTasks.length === 1 ? '' : 's'}.` : '';
@@ -432,7 +432,7 @@ function App() {
     sendReminder();
     const reminderInterval = setInterval(sendReminder, 60 * 1000);
     return () => clearInterval(reminderInterval);
-  }, [settings.notificationReminder, dueTasks, examDaysRemaining, profile.targetExam]);
+  }, [settings.notificationReminder, dueTasks, examDaysRemaining]);
 
   useEffect(() => {
     writeStorage(STORAGE_KEYS.theme, theme);
@@ -878,7 +878,7 @@ function App() {
         <div className="card exam-countdown-panel">
           <div className="section-header"><div><span className="section-kicker">EXAM COUNTDOWN</span><h2>Your Upcoming Exam</h2></div><span className="badge">{profile.examDate ? formatShortDate(profile.examDate) : 'Set date'}</span></div>
           {examDaysRemaining === null ? (
-            <div className="empty-state">Profile me exam date fill karo to countdown yahan dikhega.</div>
+            <div className="empty-state">Add an exam date in Profile to see the countdown here.</div>
           ) : (
             <div className="countdown-value"><strong>{Math.max(0, examDaysRemaining)}</strong><span>{examDaysRemaining < 0 ? 'days passed' : examDaysRemaining === 1 ? 'day left' : 'days left'}</span></div>
           )}
@@ -1659,7 +1659,7 @@ function App() {
   const renderTerms = () => (
     <div className="page">
       <div className="card inset-panel">
-        <div className="section-header"><h2>Terms & Conditions</h2></div>
+        <div className="section-header"><h2>Terms & Conditions</h2><button className="ghost-btn" onClick={() => { setPage('about'); setSelectedNav('about'); }}>Back</button></div>
         <div style={{ display: 'grid', gap: 12, lineHeight: 1.7 }} className="muted">
           <p>EduMe is a local-first study planner for personal organization, study timing, task planning, goals, quizzes, and progress tracking. By using EduMe, you understand that your data is stored in this browser or device and is not automatically backed up online.</p>
           <p>You are responsible for the accuracy of your profile, tasks, goals, quiz activity, and exam preparation information. EduMe is a productivity tool and does not replace teachers, schools, coaching, or official academic guidance.</p>
@@ -1674,7 +1674,7 @@ function App() {
   const renderPrivacy = () => (
     <div className="page">
       <div className="card inset-panel">
-        <div className="section-header"><h2>Privacy Policy</h2></div>
+        <div className="section-header"><h2>Privacy Policy</h2><button className="ghost-btn" onClick={() => { setPage('about'); setSelectedNav('about'); }}>Back</button></div>
         <div style={{ display: 'grid', gap: 12, lineHeight: 1.7 }} className="muted">
           <p>EduMe stores your profile, planner tasks, goals, study sessions, quiz history, theme, settings, streak, XP, and report data locally in your browser&apos;s Local Storage. Profile photos are stored locally as browser data when you upload them.</p>
           <p>EduMe does not maintain a user account, server-side database, analytics tracker, or paid API for core features. Your local data is not sent to EduMe automatically. Clearing browser site data or using EduMe&apos;s Clear Data option removes local content.</p>

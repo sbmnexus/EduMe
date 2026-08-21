@@ -1,4 +1,4 @@
-const CACHE_NAME = 'EduMe-v5';
+const CACHE_NAME = 'EduMe-v6';
 const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icon.svg', '/questions.json'];
 
 self.addEventListener('install', (event) => {
@@ -17,13 +17,12 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(event.request).then((response) => {
+    fetch(event.request).then((response) => {
+      if (response.ok) {
         const copy = response.clone();
         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-        return response;
-      }).catch(() => caches.match('/index.html'));
-    }),
+      }
+      return response;
+    }).catch(() => caches.match(event.request).then((cached) => cached || caches.match('/index.html'))),
   );
 });
