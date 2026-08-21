@@ -858,7 +858,6 @@ function App() {
           <p className="muted" style={{ margin: 0, fontWeight: 700 }}>Welcome</p>
           <h1 className="greeting">{getGreeting()}, {profile.name || 'Student'} 👋</h1>
         </div>
-        <button className="primary-btn" onClick={() => setPage('planner')}>Add Task</button>
       </div>
 
       {renderTimerCard()}
@@ -870,14 +869,14 @@ function App() {
             <div className="empty-state">Add weak subjects in Profile to get a focused study reminder.</div>
           ) : (
             <>
-              <p className="muted" style={{ marginTop: 0 }}>Aaj in subjects par extra dhyan do.</p>
+              <p className="muted" style={{ marginTop: 0 }}>Give these subjects extra attention today.</p>
               <div className="focus-subject-list">{weakSubjects.map((subject) => <span className="focus-subject" key={subject}>{subject}</span>)}</div>
               {weakSubjectTasks.length > 0 && <p className="focus-task-hint">{weakSubjectTasks.length} related task{weakSubjectTasks.length === 1 ? '' : 's'} pending</p>}
             </>
           )}
         </div>
         <div className="card exam-countdown-panel">
-          <div className="section-header"><div><span className="section-kicker">EXAM COUNTDOWN</span><h2>{profile.targetExam || 'Target Exam'}</h2></div><span className="badge">{profile.examDate ? formatShortDate(profile.examDate) : 'Set date'}</span></div>
+          <div className="section-header"><div><span className="section-kicker">EXAM COUNTDOWN</span><h2>Your Upcoming Exam</h2></div><span className="badge">{profile.examDate ? formatShortDate(profile.examDate) : 'Set date'}</span></div>
           {examDaysRemaining === null ? (
             <div className="empty-state">Profile me exam date fill karo to countdown yahan dikhega.</div>
           ) : (
@@ -1629,7 +1628,7 @@ function App() {
               <li>App Name: <span className="highlight-text">EduMe</span></li>
               <li>Version: 1.0.0</li>
               <li>Type: Student Study & Productivity App</li>
-              <li>Designed And Developed <span className="highlight-text">SBM</span></li>
+              <li>Designed And Developed by <span className="highlight-text">SBM</span></li>
             </ul>
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
