@@ -9,6 +9,7 @@ const STORAGE_KEYS = {
   settings: 'edume_settings',
   settingsDefaultsVersion: 'edume_settings_defaults_version',
   notificationLastShown: 'edume_notification_last_shown',
+  studyReminderLastShown: 'edume_study_reminder_last_shown',
   theme: 'edume_theme',
   streak: 'edume_streak',
   quizHistory: 'edume_quiz_history',
@@ -462,6 +463,38 @@ function App() {
   }, [settings.notificationReminder, dueTasks, examDaysRemaining]);
 
   useEffect(() => {
+    if (!settings.studyReminder || !('Notification' in window) || Notification.permission !== 'granted') return undefined;
+
+    const sendStudyReminder = () => {
+      const today = getCurrentDateKey();
+      if (readStorage(STORAGE_KEYS.studyReminderLastShown, '') === today) return;
+
+      const pendingTodayTasks = todayTasks.filter((task) => !task.completed).length;
+      const remainingGoalMinutes = Math.max(0, todayGoalMinutes - todaysMinutes);
+      if (!pendingTodayTasks && !remainingGoalMinutes) return;
+
+      const taskMessage = pendingTodayTasks
+        ? `${pendingTodayTasks} task${pendingTodayTasks === 1 ? '' : 's'} pending today.`
+        : '';
+      const goalMessage = remainingGoalMinutes
+        ? `${formatTimeDisplay(remainingGoalMinutes * 60)} left to complete today's study goal.`
+        : "Today's study goal is complete.";
+      const streakMessage = streak
+        ? `Keep your ${streak}-day streak going.`
+        : 'Start your streak today.';
+      new Notification('EduMe Study Reminder', {
+        body: `${taskMessage} ${goalMessage} ${streakMessage}`.trim(),
+        icon: '/icon.svg',
+      });
+      writeStorage(STORAGE_KEYS.studyReminderLastShown, today);
+    };
+
+    sendStudyReminder();
+    const reminderInterval = setInterval(sendStudyReminder, 60 * 1000);
+    return () => clearInterval(reminderInterval);
+  }, [settings.studyReminder, todayTasks, todayGoalMinutes, todaysMinutes, streak]);
+
+  useEffect(() => {
     writeStorage(STORAGE_KEYS.theme, theme);
   }, [theme]);
 
@@ -567,17 +600,34 @@ function App() {
     }
   };
 
-  const enableNotifications = async () => {
+  const requestNotificationPermission = async () => {
     if (!('Notification' in window)) {
       triggerToast('Notifications are not supported in this browser.');
-      return;
+      return false;
     }
     const permission = await Notification.requestPermission();
-    if (permission === 'granted') {
+    if (permission !== 'granted') {
+      triggerToast('Please allow notifications in browser settings.');
+      return false;
+    }
+    return true;
+  };
+
+  const enableNotifications = async () => {
+    if (await requestNotificationPermission()) {
       setSettings((current) => ({ ...current, notificationReminder: true }));
       triggerToast('✓ Notifications enabled');
-    } else {
-      triggerToast('Please allow notifications in browser settings.');
+    }
+  };
+
+  const toggleStudyReminder = async () => {
+    if (settings.studyReminder) {
+      setSettings((current) => ({ ...current, studyReminder: false }));
+      return;
+    }
+    if (await requestNotificationPermission()) {
+      setSettings((current) => ({ ...current, studyReminder: true }));
+      triggerToast('✓ Study reminders enabled');
     }
   };
 
@@ -1229,7 +1279,7 @@ function App() {
             <h3>🔔 Notifications & Reminders</h3>
             <div className="task-item" style={{ paddingTop: 0 }}>
               <span>Study Reminder</span>
-              <ToggleSwitch enabled={settings.studyReminder} onToggle={() => setSettings((current) => ({ ...current, studyReminder: !current.studyReminder }))} />
+              <ToggleSwitch enabled={settings.studyReminder} onToggle={toggleStudyReminder} />
             </div>
             <div className="task-item" style={{ paddingTop: 0 }}>
               <span>Notification Reminder</span>
