@@ -7,6 +7,7 @@ const STORAGE_KEYS = {
   goals: 'edume_goals',
   sessions: 'edume_sessions',
   settings: 'edume_settings',
+  settingsDefaultsVersion: 'edume_settings_defaults_version',
   notificationLastShown: 'edume_notification_last_shown',
   theme: 'edume_theme',
   streak: 'edume_streak',
@@ -25,9 +26,9 @@ const defaultProfile = {
 };
 
 const defaultSettings = {
-  studyReminder: true,
-  notificationReminder: true,
-  soundEffects: true,
+  studyReminder: false,
+  notificationReminder: false,
+  soundEffects: false,
   theme: 'system',
 };
 
@@ -282,6 +283,15 @@ function getGoalsProgress(goals) {
   return Math.round(total / goals.length);
 }
 
+function getOverallProgress({ goalAverage, averageAccuracy, hasGoals, hasQuizHistory }) {
+  const availableMetrics = [
+    hasGoals ? goalAverage : null,
+    hasQuizHistory ? averageAccuracy : null,
+  ].filter((value) => value !== null);
+  if (!availableMetrics.length) return 0;
+  return Math.round(availableMetrics.reduce((sum, value) => sum + value, 0) / availableMetrics.length);
+}
+
 function getBadges({ xp, streak, quizHistory, completedTasksCount }) {
   return [
     { id: 'first-step', name: '🌱 First Step', unlocked: xp >= 50 },
@@ -292,6 +302,16 @@ function getBadges({ xp, streak, quizHistory, completedTasksCount }) {
   ];
 }
 
+function getInitialSettings() {
+  const storedSettings = readStorage(STORAGE_KEYS.settings, {});
+  const settingsDefaultsVersion = readStorage(STORAGE_KEYS.settingsDefaultsVersion, 0);
+  if (!settingsDefaultsVersion) {
+    writeStorage(STORAGE_KEYS.settingsDefaultsVersion, 1);
+    return { ...defaultSettings, theme: storedSettings.theme || defaultSettings.theme };
+  }
+  return { ...defaultSettings, ...storedSettings };
+}
+
 function App() {
   const [page, setPage] = useState('home');
   const [showOnboarding, setShowOnboarding] = useState(() => !readStorage(STORAGE_KEYS.onboarding, false));
@@ -299,7 +319,7 @@ function App() {
   const [tasks, setTasks] = useState(() => readStorage(STORAGE_KEYS.tasks, []));
   const [goals, setGoals] = useState(() => readStorage(STORAGE_KEYS.goals, []));
   const [sessions, setSessions] = useState(() => readStorage(STORAGE_KEYS.sessions, []));
-  const [settings, setSettings] = useState(() => ({ ...defaultSettings, ...readStorage(STORAGE_KEYS.settings, defaultSettings) }));
+  const [settings, setSettings] = useState(getInitialSettings);
   const [theme, setTheme] = useState(() => readStorage(STORAGE_KEYS.theme, 'system'));
   const [xp, setXp] = useState(() => Number(readStorage(STORAGE_KEYS.xp, 0)) || 0);
   const [quizHistory, setQuizHistory] = useState(() => readStorage(STORAGE_KEYS.quizHistory, []));
@@ -800,6 +820,7 @@ function App() {
       writeStorage(STORAGE_KEYS.quizHistory, Array.isArray(data.quizHistory) ? data.quizHistory : []);
       writeStorage(STORAGE_KEYS.xp, Number(data.xp || 0));
       writeStorage(STORAGE_KEYS.onboarding, Boolean(data.onboarding ?? false));
+      writeStorage(STORAGE_KEYS.settingsDefaultsVersion, 1);
       triggerToast('✓ Data Imported Successfully');
       event.target.value = '';
     } catch {
@@ -968,7 +989,7 @@ function App() {
                     <span className="badge">{formatShortDate(task.date)}</span>
                   </div>
                 ))}
-                {examDaysRemaining !== null && examDaysRemaining >= 0 && <div className="task-item exam-reminder"><div><strong>{profile.targetExam || 'Exam'} nearby</strong><div className="muted">{examDaysRemaining} day{examDaysRemaining === 1 ? '' : 's'} left · {formatShortDate(profile.examDate)}</div></div><span className="badge">Focus</span></div>}
+                {examDaysRemaining !== null && examDaysRemaining >= 0 && <div className="task-item exam-reminder"><div><strong>Exam in {examDaysRemaining} day{examDaysRemaining === 1 ? '' : 's'}</strong><div className="muted">{formatShortDate(profile.examDate)}</div></div><span className="badge">Focus</span></div>}
               </div>
             )}
           </div>
@@ -1402,7 +1423,12 @@ function App() {
     const tasksCompleted = tasks.filter((task) => task.completed).length;
     const averageAccuracy = quizHistory.length ? Math.round(quizHistory.reduce((sum, entry) => sum + Number(entry.accuracy || 0), 0) / quizHistory.length) : 0;
     const goalAverage = goals.length ? Math.round(goals.reduce((sum, goal) => sum + Number(goal.progress || 0), 0) / goals.length) : 0;
-    const overallProgress = Math.round((goalAverage + averageAccuracy) / 2);
+    const overallProgress = getOverallProgress({
+      goalAverage,
+      averageAccuracy,
+      hasGoals: goals.length > 0,
+      hasQuizHistory: quizHistory.length > 0,
+    });
 
     return (
       <div className="page">
