@@ -1,4 +1,4 @@
-const CACHE_NAME = 'EduMe-v7';
+const CACHE_NAME = 'EduMe-v9';
 const APP_SHELL = [
   '/',
   '/index.html',
