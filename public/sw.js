@@ -1,5 +1,13 @@
-const CACHE_NAME = 'EduMe-v6';
-const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icon.svg', '/questions.json'];
+const CACHE_NAME = 'EduMe-v7';
+const APP_SHELL = [
+  '/',
+  '/index.html',
+  '/manifest.webmanifest',
+  '/icon.svg',
+  '/icon-192.png',
+  '/icon-512.png',
+  '/questions.json',
+];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
