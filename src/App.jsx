@@ -448,19 +448,24 @@ function App() {
     const sendReminder = () => {
       const today = getCurrentDateKey();
       if (readStorage(STORAGE_KEYS.notificationLastShown, '') === today) return;
+      const tomorrow = new Date(`${today}T00:00:00`);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowKey = buildDateKey(tomorrow);
       const examNotice = examDaysRemaining !== null && examDaysRemaining >= 0 && examDaysRemaining <= 7
         ? ` Exam in ${examDaysRemaining} day${examDaysRemaining === 1 ? '' : 's'}.`
         : '';
-      if (!dueTasks.length && !examNotice) return;
+      const tomorrowTask = upcomingTasks.find((task) => !task.completed && task.date === tomorrowKey);
+      const upcomingNotice = tomorrowTask ? ` ${tomorrowTask.name} is due tomorrow.` : '';
+      if (!dueTasks.length && !examNotice && !upcomingNotice) return;
       const taskNotice = dueTasks.length ? `${dueTasks.length} due study task${dueTasks.length === 1 ? '' : 's'}.` : '';
-      new Notification('EduMe Study Reminder', { body: `${taskNotice}${examNotice}`, icon: '/icon.svg' });
+      new Notification('EduMe Notification Reminder', { body: `${taskNotice}${upcomingNotice}${examNotice}`, icon: '/icon.svg' });
       writeStorage(STORAGE_KEYS.notificationLastShown, today);
     };
 
     sendReminder();
     const reminderInterval = setInterval(sendReminder, 60 * 1000);
     return () => clearInterval(reminderInterval);
-  }, [settings.notificationReminder, dueTasks, examDaysRemaining]);
+  }, [settings.notificationReminder, dueTasks, upcomingTasks, examDaysRemaining]);
 
   useEffect(() => {
     if (!settings.studyReminder || !('Notification' in window) || Notification.permission !== 'granted') return undefined;
@@ -471,19 +476,23 @@ function App() {
 
       const pendingTodayTasks = todayTasks.filter((task) => !task.completed).length;
       const remainingGoalMinutes = Math.max(0, todayGoalMinutes - todaysMinutes);
-      if (!pendingTodayTasks && !remainingGoalMinutes) return;
+      const completedGoal = todaysMinutes > 0 && remainingGoalMinutes === 0;
+      const completedQuizToday = quizHistory.some((entry) => String(entry.date || '').slice(0, 10) === today);
+      const streakAtRisk = todaysMinutes < 10;
+      if (!pendingTodayTasks && !remainingGoalMinutes && !completedGoal && completedQuizToday) return;
 
       const taskMessage = pendingTodayTasks
         ? `${pendingTodayTasks} task${pendingTodayTasks === 1 ? '' : 's'} pending today.`
         : '';
       const goalMessage = remainingGoalMinutes
         ? `${formatTimeDisplay(remainingGoalMinutes * 60)} left to complete today's study goal.`
-        : "Today's study goal is complete.";
-      const streakMessage = streak
-        ? `Keep your ${streak}-day streak going.`
-        : 'Start your streak today.';
+        : completedGoal ? "Great work! You've completed today's study goal." : '';
+      const streakMessage = streakAtRisk
+        ? streak ? `Study for 10 minutes to keep your ${streak}-day streak going.` : 'Study for 10 minutes to start your streak.'
+        : '';
+      const quizMessage = completedQuizToday ? '' : 'Take a quiz today to strengthen your preparation.';
       new Notification('EduMe Study Reminder', {
-        body: `${taskMessage} ${goalMessage} ${streakMessage}`.trim(),
+        body: `${taskMessage} ${goalMessage} ${streakMessage} ${quizMessage}`.trim(),
         icon: '/icon.svg',
       });
       writeStorage(STORAGE_KEYS.studyReminderLastShown, today);
@@ -492,7 +501,7 @@ function App() {
     sendStudyReminder();
     const reminderInterval = setInterval(sendStudyReminder, 60 * 1000);
     return () => clearInterval(reminderInterval);
-  }, [settings.studyReminder, todayTasks, todayGoalMinutes, todaysMinutes, streak]);
+  }, [settings.studyReminder, todayTasks, todayGoalMinutes, todaysMinutes, streak, quizHistory]);
 
   useEffect(() => {
     writeStorage(STORAGE_KEYS.theme, theme);
