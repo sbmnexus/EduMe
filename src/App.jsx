@@ -969,6 +969,29 @@ function App() {
 
       {renderTimerCard()}
 
+      <div className="home-overview-grid">
+        <div className="card home-focus-panel">
+          <div className="section-header"><div><span className="section-kicker">PRIORITY</span><h2>Weak Subject Focus</h2></div><span className="badge">{weakSubjects.length}</span></div>
+          {weakSubjects.length === 0 ? (
+            <div className="empty-state">Add weak subjects in Profile to get a focused study reminder.</div>
+          ) : (
+            <>
+              <p className="muted" style={{ marginTop: 0 }}>Give these subjects extra attention today.</p>
+              <div className="focus-subject-list">{weakSubjects.map((subject) => <span className="focus-subject" key={subject}>{subject}</span>)}</div>
+              {weakSubjectTasks.length > 0 && <p className="focus-task-hint">{weakSubjectTasks.length} related task{weakSubjectTasks.length === 1 ? '' : 's'} pending</p>}
+            </>
+          )}
+        </div>
+        <div className="card exam-countdown-panel">
+          <div className="section-header"><div><span className="section-kicker">EXAM COUNTDOWN</span><h2>Your Upcoming Exam</h2></div><span className="badge">{profile.examDate ? formatShortDate(profile.examDate) : 'Set date'}</span></div>
+          {examDaysRemaining === null ? (
+            <div className="empty-state">Add an exam date in Profile to see the countdown here.</div>
+          ) : (
+            <div className="countdown-value"><strong>{Math.max(0, examDaysRemaining)}</strong><span>{examDaysRemaining < 0 ? 'days passed' : examDaysRemaining === 1 ? 'day left' : 'days left'}</span></div>
+          )}
+        </div>
+      </div>
+
       <div className="home-grid">
         <div className="stack">
           <div className="card stat-card home-panel-goal">
@@ -1026,6 +1049,23 @@ function App() {
         </div>
 
         <div className="stack">
+          <div className="card list-card home-panel-reminders">
+            <div className="section-header"><h3>Study Reminders</h3></div>
+            {upcomingTasks.length === 0 && examDaysRemaining === null ? (
+              <div className="empty-state">No upcoming study or exam reminders.</div>
+            ) : (
+              <div>
+                {upcomingTasks.slice(0, 5).map((task) => (
+                  <div key={task.id} className="task-item">
+                    <div><strong>{task.name}</strong><div className="muted">{task.subject} · {formatShortDate(task.date)}</div></div>
+                    <span className="badge">{formatShortDate(task.date)}</span>
+                  </div>
+                ))}
+                {examDaysRemaining !== null && examDaysRemaining >= 0 && <div className="task-item exam-reminder"><div><strong>Exam in {examDaysRemaining} day{examDaysRemaining === 1 ? '' : 's'}</strong><div className="muted">{formatShortDate(profile.examDate)}</div></div><span className="badge">Focus</span></div>}
+              </div>
+            )}
+          </div>
+
           <div className="card list-card home-panel-study-time">
             <div className="section-header"><h3>Study Time</h3></div>
             <div style={{ fontSize: '2rem', fontWeight: 800 }}>{formatTimeDisplay(todaysMinutes * 60)}</div>
