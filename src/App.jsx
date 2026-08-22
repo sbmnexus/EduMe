@@ -262,18 +262,29 @@ function calculateStreak(tasks, sessions) {
     if (minutes >= 10) qualifyingDays.add(dateKey);
   });
 
+  const latestQualifyingDate = [...qualifyingDays].sort().at(-1);
+  if (!latestQualifyingDate) return 0;
+
+  const today = new Date(`${getCurrentDateKey()}T00:00:00`);
+  const latestDate = new Date(`${latestQualifyingDate}T00:00:00`);
+  const daysSinceStudy = Math.floor((today - latestDate) / (1000 * 60 * 60 * 24));
+  if (daysSinceStudy > 3) return 0;
+
   let streak = 0;
-  const cursor = new Date();
-  while (true) {
-    const key = buildDateKey(cursor);
-    if (qualifyingDays.has(key)) {
-      streak += 1;
-      cursor.setDate(cursor.getDate() - 1);
-    } else {
-      break;
-    }
+  let previousDate = null;
+  for (const dateKey of [...qualifyingDays].sort().reverse()) {
+    const date = new Date(`${dateKey}T00:00:00`);
+    if (previousDate && Math.floor((previousDate - date) / (1000 * 60 * 60 * 24)) > 3) break;
+    streak += 1;
+    previousDate = date;
   }
   return streak;
+}
+
+function getStreakStatus({ streak, todaysMinutes }) {
+  if (streak === 0) return 'Ready to restart';
+  if (todaysMinutes >= 10) return 'Active today';
+  return 'At risk today';
 }
 
 function getLevelForXp(xp) {
@@ -1567,6 +1578,7 @@ function App() {
         quizAttempts: quizHistory.length,
         quizAccuracy: quizHistory.length ? Math.round(quizHistory.reduce((sum, entry) => sum + Number(entry.accuracy || 0), 0) / quizHistory.length) : 0,
         streak,
+        streakStatus: getStreakStatus({ streak, todaysMinutes }),
         xp,
         level: levelInfo.level,
       };
@@ -1615,6 +1627,7 @@ function App() {
                 <div class="stat"><strong>Tasks Completed</strong><div>${reportData.tasksCompleted}</div></div>
                 <div class="stat"><strong>Goals Progress</strong><div>${reportData.goalsProgress}%</div></div>
                 <div class="stat"><strong>Streak</strong><div>${reportData.streak} days</div></div>
+                <div class="stat"><strong>Streak Status</strong><div>${reportData.streakStatus}</div></div>
               </div>
             </div>
             <div class="card">
