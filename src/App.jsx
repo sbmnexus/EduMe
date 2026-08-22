@@ -212,7 +212,7 @@ function calculateDailyStudyMinutes(sessions) {
   const dayKey = buildDateKey(today);
   return sessions
     .filter((s) => s.dateKey === dayKey)
-    .reduce((sum, s) => sum + Number(s.durationMinutes || 0), 0);
+    .reduce((sum, s) => sum + (Number(s.durationSeconds) || (Number(s.durationMinutes) || 0) * 60), 0) / 60;
 }
 
 function getStudyTrend(sessions) {
@@ -232,23 +232,29 @@ function getStudyTrend(sessions) {
   sessions.forEach((session) => {
     const day = byDate.get(session.dateKey);
     if (!day) return;
-    day.minutes += Number(session.durationMinutes || 0);
+    day.minutes += (Number(session.durationSeconds) || (Number(session.durationMinutes) || 0) * 60) / 60;
     day.sessions += 1;
   });
   return days;
 }
 
 function calculateStreak(tasks, sessions) {
-  const uniqueDays = new Set();
-  const allStudyDates = sessions.map((s) => s.dateKey).filter(Boolean);
-  allStudyDates.forEach((d) => uniqueDays.add(d));
-  tasks.filter((task) => task.completed).forEach((task) => uniqueDays.add(task.date));
+  const qualifyingDays = new Set();
+  const minutesByDay = new Map();
+  sessions.forEach((session) => {
+    if (!session.dateKey) return;
+    const seconds = Number(session.durationSeconds) || (Number(session.durationMinutes) || 0) * 60;
+    minutesByDay.set(session.dateKey, (minutesByDay.get(session.dateKey) || 0) + (seconds / 60));
+  });
+  minutesByDay.forEach((minutes, dateKey) => {
+    if (minutes >= 10) qualifyingDays.add(dateKey);
+  });
 
   let streak = 0;
   const cursor = new Date();
   while (true) {
     const key = buildDateKey(cursor);
-    if (uniqueDays.has(key)) {
+    if (qualifyingDays.has(key)) {
       streak += 1;
       cursor.setDate(cursor.getDate() - 1);
     } else {
@@ -342,6 +348,7 @@ function App() {
   const completedGoals = useMemo(() => goals.filter((g) => g.completed), [goals]);
   const todayGoalMinutes = Number(profile.dailyStudyHours || 0) * 60;
   const goalProgress = todayGoalMinutes > 0 ? Math.min(100, (todaysMinutes / todayGoalMinutes) * 100) : 0;
+  const streakProgress = Math.min(100, (todaysMinutes / 10) * 100);
   const levelInfo = useMemo(() => getLevelForXp(xp), [xp]);
   const badges = useMemo(
     () => getBadges({ xp, streak, quizHistory, completedTasksCount: tasks.filter((task) => task.completed).length }),
@@ -358,7 +365,7 @@ function App() {
       const date = new Date(session.createdAt);
       return date >= start && date <= end;
     });
-    return { minutes: items.reduce((sum, item) => sum + Number(item.durationMinutes || 0), 0), sessions: items.length };
+    return { minutes: items.reduce((sum, item) => sum + ((Number(item.durationSeconds) || (Number(item.durationMinutes) || 0) * 60) / 60), 0), sessions: items.length };
   }, [sessions]);
   const monthlySummary = useMemo(() => {
     const now = new Date();
@@ -368,7 +375,7 @@ function App() {
       const date = new Date(session.createdAt);
       return date >= start && date <= end;
     });
-    return { minutes: items.reduce((sum, item) => sum + Number(item.durationMinutes || 0), 0), sessions: items.length };
+    return { minutes: items.reduce((sum, item) => sum + ((Number(item.durationSeconds) || (Number(item.durationMinutes) || 0) * 60) / 60), 0), sessions: items.length };
   }, [sessions]);
 
   const filteredSearch = useMemo(() => {
@@ -654,14 +661,16 @@ function App() {
       triggerToast('Start the timer before finishing a session.');
       return;
     }
-    const durationMinutes = Math.max(1, Math.round(timerSeconds / 60));
+    const durationSeconds = Math.floor(timerSeconds);
+    const durationMinutes = durationSeconds / 60;
     const session = {
       id: makeId('session'),
+      durationSeconds,
       durationMinutes,
       dateKey: getCurrentDateKey(),
       createdAt: new Date().toISOString(),
     };
-    const xpEarned = Math.max(10, durationMinutes * 5);
+    const xpEarned = Math.floor(durationSeconds / 60) * 2;
     const nextXp = xp + xpEarned;
     const nextLevelInfo = getLevelForXp(nextXp);
     const nextBadges = getBadges({ xp: nextXp, streak, quizHistory, completedTasksCount: tasks.filter((task) => task.completed).length });
@@ -971,7 +980,12 @@ function App() {
 
           <div className="card list-card home-panel-streak">
             <div className="section-header"><h3>Streak</h3></div>
-            <div style={{ fontSize: '2rem', fontWeight: 800 }}>{streak} days</div>
+            <div className="streak-widget">
+              <div className="streak-ring" style={{ '--streak-progress': `${streakProgress * 3.6}deg` }}>
+                <span aria-hidden="true">🔥</span>
+              </div>
+              <div><strong className="streak-count">{streak} days</strong><span className="muted streak-caption">{Math.min(10, Math.floor(todaysMinutes))}/10 min today</span></div>
+            </div>
           </div>
 
           <div className="card list-card home-panel-goals">
@@ -1229,13 +1243,13 @@ function App() {
           <div className="card" style={{ padding: 16 }}>
             <h3>Theme</h3>
             <div className="nav-row">
-              {['light', 'dark', 'system'].map((option) => (
+              {['light', 'dark', 'aurora', 'system'].map((option) => (
                 <button
                   key={option}
                   className={theme === option ? 'primary-btn' : 'ghost-btn'}
                   onClick={() => setTheme(option)}
                 >
-                  {option === 'light' ? 'Light' : option === 'dark' ? 'Dark' : 'System Default'}
+                  {option === 'light' ? 'Light' : option === 'dark' ? 'Dark' : option === 'aurora' ? 'Aurora Premium' : 'System Default'}
                 </button>
               ))}
             </div>
@@ -1509,7 +1523,7 @@ function App() {
             <div class="card">
               <h2>Study Summary</h2>
               <div class="grid">
-                <div class="stat"><strong>Total Study Time</strong><div>${Math.floor(reportData.totalStudy / 60)}h ${reportData.totalStudy % 60}m</div></div>
+                <div class="stat"><strong>Total Study Time</strong><div>${formatTimeDisplay(reportData.totalStudy * 60)}</div></div>
                 <div class="stat"><strong>Tasks Completed</strong><div>${reportData.tasksCompleted}</div></div>
                 <div class="stat"><strong>Goals Progress</strong><div>${reportData.goalsProgress}%</div></div>
                 <div class="stat"><strong>Streak</strong><div>${reportData.streak} days</div></div>
@@ -1950,7 +1964,7 @@ function App() {
                 <h2>Excellent work!</h2>
                 <p className="muted">You showed up and made real progress today.</p>
                 <div className="celebration-stats">
-                  <div><strong>{sessionSummary.durationMinutes} min</strong><span>study time</span></div>
+                  <div><strong>{formatTimeDisplay(sessionSummary.durationMinutes * 60)}</strong><span>study time</span></div>
                   <div><strong>+{sessionSummary.xpEarned} XP</strong><span>earned</span></div>
                   <div><strong>Level {sessionSummary.level}</strong><span>current level</span></div>
                 </div>
