@@ -123,18 +123,28 @@ function playFeedbackTone(type = 'tap') {
   try {
     feedbackAudioContext ||= new (window.AudioContext || window.webkitAudioContext)();
     const context = feedbackAudioContext;
-    const oscillator = context.createOscillator();
-    const gain = context.createGain();
-    const frequencies = { tap: 520, success: 740, finish: 880, error: 220 };
-    oscillator.type = 'sine';
-    oscillator.frequency.value = frequencies[type] || frequencies.tap;
-    gain.gain.setValueAtTime(0.0001, context.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.08, context.currentTime + 0.01);
-    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + (type === 'finish' ? 0.3 : 0.12));
-    oscillator.connect(gain);
-    gain.connect(context.destination);
-    oscillator.start();
-    oscillator.stop(context.currentTime + (type === 'finish' ? 0.32 : 0.14));
+    if (context.state === 'suspended') context.resume();
+    const noteSets = {
+      tap: [{ frequency: 560, delay: 0, duration: 0.12 }],
+      success: [{ frequency: 660, delay: 0, duration: 0.14 }, { frequency: 880, delay: 0.08, duration: 0.18 }],
+      finish: [{ frequency: 660, delay: 0, duration: 0.16 }, { frequency: 784, delay: 0.1, duration: 0.16 }, { frequency: 988, delay: 0.2, duration: 0.28 }],
+      error: [{ frequency: 240, delay: 0, duration: 0.16 }],
+    };
+    const notes = noteSets[type] || noteSets.tap;
+    notes.forEach(({ frequency, delay, duration }) => {
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      const start = context.currentTime + delay;
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(frequency, start);
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(0.14, start + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+      oscillator.connect(gain);
+      gain.connect(context.destination);
+      oscillator.start(start);
+      oscillator.stop(start + duration + 0.02);
+    });
   } catch {
     // Audio is optional and can be blocked by browser permissions.
   }
@@ -352,6 +362,7 @@ function App() {
   const [selectedNav, setSelectedNav] = useState('home');
   const [currentDateKey, setCurrentDateKey] = useState(getCurrentDateKey());
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [utilityReturnPage, setUtilityReturnPage] = useState('home');
   const intervalRef = useRef(null);
 
   const todayTasks = useMemo(() => getTodayTasks(tasks), [tasks]);
@@ -639,6 +650,13 @@ function App() {
       triggerToast('✓ Study reminders enabled');
     }
   };
+
+  const openUtilityPage = (utilityPage) => {
+    setUtilityReturnPage(page);
+    setPage(utilityPage);
+  };
+
+  const closeUtilityPage = () => setPage(utilityReturnPage);
 
   const handleInstallPwa = async () => {
     if (!deferredInstallPrompt) {
@@ -951,29 +969,6 @@ function App() {
 
       {renderTimerCard()}
 
-      <div className="home-overview-grid">
-        <div className="card home-focus-panel">
-          <div className="section-header"><div><span className="section-kicker">PRIORITY</span><h2>Weak Subject Focus</h2></div><span className="badge">{weakSubjects.length}</span></div>
-          {weakSubjects.length === 0 ? (
-            <div className="empty-state">Add weak subjects in Profile to get a focused study reminder.</div>
-          ) : (
-            <>
-              <p className="muted" style={{ marginTop: 0 }}>Give these subjects extra attention today.</p>
-              <div className="focus-subject-list">{weakSubjects.map((subject) => <span className="focus-subject" key={subject}>{subject}</span>)}</div>
-              {weakSubjectTasks.length > 0 && <p className="focus-task-hint">{weakSubjectTasks.length} related task{weakSubjectTasks.length === 1 ? '' : 's'} pending</p>}
-            </>
-          )}
-        </div>
-        <div className="card exam-countdown-panel">
-          <div className="section-header"><div><span className="section-kicker">EXAM COUNTDOWN</span><h2>Your Upcoming Exam</h2></div><span className="badge">{profile.examDate ? formatShortDate(profile.examDate) : 'Set date'}</span></div>
-          {examDaysRemaining === null ? (
-            <div className="empty-state">Add an exam date in Profile to see the countdown here.</div>
-          ) : (
-            <div className="countdown-value"><strong>{Math.max(0, examDaysRemaining)}</strong><span>{examDaysRemaining < 0 ? 'days passed' : examDaysRemaining === 1 ? 'day left' : 'days left'}</span></div>
-          )}
-        </div>
-      </div>
-
       <div className="home-grid">
         <div className="stack">
           <div className="card stat-card home-panel-goal">
@@ -1031,41 +1026,9 @@ function App() {
         </div>
 
         <div className="stack">
-          <div className="card list-card home-panel-reminders">
-            <div className="section-header">
-              <h3>Study Reminders</h3>
-            </div>
-            {upcomingTasks.length === 0 && examDaysRemaining === null ? (
-              <div className="empty-state">No upcoming study or exam reminders.</div>
-            ) : (
-              <div>
-                {upcomingTasks.slice(0, 5).map((task) => (
-                  <div key={task.id} className="task-item">
-                    <div>
-                      <strong>{task.name}</strong>
-                      <div className="muted">{task.subject} · {formatShortDate(task.date)}</div>
-                    </div>
-                    <span className="badge">{formatShortDate(task.date)}</span>
-                  </div>
-                ))}
-                {examDaysRemaining !== null && examDaysRemaining >= 0 && <div className="task-item exam-reminder"><div><strong>Exam in {examDaysRemaining} day{examDaysRemaining === 1 ? '' : 's'}</strong><div className="muted">{formatShortDate(profile.examDate)}</div></div><span className="badge">Focus</span></div>}
-              </div>
-            )}
-          </div>
-
           <div className="card list-card home-panel-study-time">
             <div className="section-header"><h3>Study Time</h3></div>
             <div style={{ fontSize: '2rem', fontWeight: 800 }}>{formatTimeDisplay(todaysMinutes * 60)}</div>
-          </div>
-
-          <div className="card list-card home-panel-streak">
-            <div className="section-header"><h3>Streak</h3></div>
-            <div className="streak-widget">
-              <div className="streak-ring" style={{ '--streak-progress': `${streakProgress * 3.6}deg` }}>
-                <span aria-hidden="true">🔥</span>
-              </div>
-              <div><strong className="streak-count">{streak} days</strong><span className="muted streak-caption">{Math.min(10, Math.floor(todaysMinutes))}/10 min today</span></div>
-            </div>
           </div>
 
           <div className="card list-card home-panel-goals">
@@ -1815,6 +1778,69 @@ function App() {
     </div>
   );
 
+  const renderNotifications = () => {
+    const pendingTodayTasks = todayTasks.filter((task) => !task.completed);
+    const upcomingNotificationTasks = upcomingTasks.filter((task) => !task.completed).slice(0, 5);
+    const remainingGoalMinutes = Math.max(0, todayGoalMinutes - todaysMinutes);
+    const completedQuizToday = quizHistory.some((entry) => String(entry.date || '').slice(0, 10) === getCurrentDateKey());
+
+    return (
+      <div className="page utility-page">
+        <div className="utility-page-header">
+          <button className="icon-btn utility-back-btn" onClick={closeUtilityPage} aria-label="Go back" title="Go back">←</button>
+          <div><span className="eyebrow">YOUR UPDATES</span><h1>Notifications</h1></div>
+        </div>
+        <div className="notification-list">
+          <section className="card notification-card notification-study">
+            <div className="notification-card-title"><span className="notification-symbol">📚</span><div><h2>Study Reminder</h2><span className="muted">Your plan for today</span></div></div>
+            {pendingTodayTasks.length > 0 && <p><strong>{pendingTodayTasks.length} task{pendingTodayTasks.length === 1 ? '' : 's'} pending today.</strong> Keep your plan moving.</p>}
+            {remainingGoalMinutes > 0 && <p><strong>{formatTimeDisplay(remainingGoalMinutes * 60)} left</strong> to complete today&apos;s study goal.</p>}
+            {remainingGoalMinutes === 0 && todaysMinutes > 0 && <p><strong>Great work!</strong> You completed today&apos;s study goal.</p>}
+            {!completedQuizToday && <p>Take a quiz today to strengthen your preparation.</p>}
+            {pendingTodayTasks.length === 0 && remainingGoalMinutes === 0 && completedQuizToday && <p>You are all caught up for today.</p>}
+          </section>
+
+          <section className="card notification-card notification-focus">
+            <div className="notification-card-title"><span className="notification-symbol">🎯</span><div><h2>Weak Subject Focus</h2><span className="muted">Extra attention for today</span></div></div>
+            {weakSubjects.length > 0 ? <><div className="focus-subject-list">{weakSubjects.map((subject) => <span className="focus-subject" key={subject}>{subject}</span>)}</div><p>{weakSubjectTasks.length ? `${weakSubjectTasks.length} related task${weakSubjectTasks.length === 1 ? '' : 's'} pending.` : 'Review these subjects in your next session.'}</p></> : <p className="muted">Add weak subjects in Profile to get a focused study reminder.</p>}
+          </section>
+
+          <section className="card notification-card notification-planning">
+            <div className="notification-card-title"><span className="notification-symbol">🔔</span><div><h2>Upcoming & Due Tasks</h2><span className="muted">Your next actions</span></div></div>
+            {dueTasks.length > 0 && <p><strong>{dueTasks.length} due study task{dueTasks.length === 1 ? '' : 's'}.</strong></p>}
+            {upcomingNotificationTasks.map((task) => <div className="notification-row" key={task.id}><span>{task.name}</span><span className="badge">{formatShortDate(task.date)}</span></div>)}
+            {dueTasks.length === 0 && upcomingNotificationTasks.length === 0 && <p className="muted">No upcoming tasks. Keep planning ahead.</p>}
+          </section>
+
+          <section className="card notification-card notification-exam">
+            <div className="notification-card-title"><span className="notification-symbol">🗓️</span><div><h2>Upcoming Exam</h2><span className="muted">Stay prepared</span></div></div>
+            {examDaysRemaining !== null && examDaysRemaining >= 0 ? <p><strong>Exam in {examDaysRemaining} day{examDaysRemaining === 1 ? '' : 's'}.</strong> Review your plan and keep going.</p> : <p className="muted">Add an exam date in Profile to see your countdown.</p>}
+          </section>
+
+          <section className="card notification-card notification-motivation">
+            <div className="notification-card-title"><span className="notification-symbol">✨</span><div><h2>Keep Going</h2><span className="muted">A little progress matters</span></div></div>
+            <p>{streak > 0 ? `You have a ${streak}-day streak. Small sessions keep your momentum strong.` : 'Start with 10 focused minutes today and build your first streak.'}</p>
+          </section>
+        </div>
+      </div>
+    );
+  };
+
+  const renderStreak = () => (
+    <div className="page utility-page streak-page">
+      <div className="utility-page-header">
+        <button className="icon-btn utility-back-btn" onClick={closeUtilityPage} aria-label="Go back" title="Go back">←</button>
+        <div><span className="eyebrow">DAILY MOMENTUM</span><h1>Study Streak</h1></div>
+      </div>
+      <div className="card streak-detail-card">
+        <div className="streak-detail-ring" style={{ '--streak-progress': `${streakProgress * 3.6}deg` }}><strong>{Math.min(10, Math.floor(todaysMinutes))}/10</strong><span>minutes</span></div>
+        <h2>{streak > 0 ? `${streak} day${streak === 1 ? '' : 's'} strong` : 'Start your streak'}</h2>
+        <p className="muted">{streak >= 1 ? 'Keep showing up with one focused study session today.' : 'Study for 10 focused minutes today to begin your streak.'}</p>
+        <button className="primary-btn" onClick={closeUtilityPage}>Continue</button>
+      </div>
+    </div>
+  );
+
   const renderContent = () => {
     switch (page) {
       case 'planner': return renderPlanner();
@@ -1827,6 +1853,8 @@ function App() {
       case 'about': return renderAbout();
       case 'terms': return renderTerms();
       case 'privacy': return renderPrivacy();
+      case 'notifications': return renderNotifications();
+      case 'streak': return renderStreak();
       default: return renderHome();
     }
   };
@@ -1872,6 +1900,12 @@ function App() {
           <header className="topbar">
             <div className="brand"><EduMeLogo /> <span>EduMe</span></div>
             <div className="topbar-actions">
+              <button className="icon-btn utility-header-btn" onClick={() => openUtilityPage('streak')} aria-label={`Study streak: ${streak} days`} title={`Study streak: ${streak} days`}>
+                <span aria-hidden="true">🔥</span><strong>{streak}</strong>
+              </button>
+              <button className="icon-btn utility-header-btn notification-header-btn" onClick={() => openUtilityPage('notifications')} aria-label="Open notifications" title="Notifications">
+                <span aria-hidden="true">🔔</span>
+              </button>
               <button
                 className="icon-btn mobile-menu-toggle"
                 onClick={() => setMobileMenuOpen((current) => !current)}
