@@ -14,16 +14,16 @@ const STORAGE_KEYS = {
   streak: 'edume_streak',
   quizHistory: 'edume_quiz_history',
   xp: 'edume_xp',
+  installPromptDismissedAt: 'edume_install_prompt_dismissed_at',
 };
 
 const defaultProfile = {
   name: '',
-  targetExam: 'JEE',
+  targetExam: '',
   examDate: '',
   className: '',
   weakSubjects: '',
-  dailyStudyHours: '3',
-  photo: '',
+  dailyStudyHours: '',
 };
 
 const defaultSettings = {
@@ -44,15 +44,26 @@ const navItems = [
 ];
 
 const examSubjects = {
-  JEE: ['Physics', 'Chemistry', 'Mathematics'],
+  'JEE MAINS & ADVANCE': ['Physics', 'Chemistry', 'Mathematics'],
   NEET: ['Physics', 'Chemistry', 'Biology'],
-  Board: ['Physics', 'Chemistry', 'Mathematics', 'Biology'],
+  BOARDS: ['Physics', 'Chemistry', 'Mathematics', 'Biology', 'Hindi', 'English'],
+  CA: ['Accounting', 'Law', 'Economics', 'Taxation'],
 };
+
+const quizExamKeys = {
+  'JEE MAINS & ADVANCE': 'JEE',
+  NEET: 'NEET',
+  BOARDS: 'Board',
+  CA: 'Board',
+};
+
+const QUIZ_COMPLETION_XP = 10;
+const QUIZ_CORRECT_ANSWER_XP = 5;
 
 const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 function EduMeLogo({ className = '' }) {
-  return <img className={`brand-mark ${className}`.trim()} src="/icon.svg" alt="EduMe" />;
+  return <img className={`brand-mark ${className}`.trim()} src="/icon-192.png" alt="EduMe" />;
 }
 
 function makeId(prefix = 'id') {
@@ -262,7 +273,8 @@ function calculateStreak(tasks, sessions) {
     if (minutes >= 10) qualifyingDays.add(dateKey);
   });
 
-  const latestQualifyingDate = [...qualifyingDays].sort().at(-1);
+  const sortedQualifyingDays = [...qualifyingDays].sort();
+  const latestQualifyingDate = sortedQualifyingDays[sortedQualifyingDays.length - 1];
   if (!latestQualifyingDate) return 0;
 
   const today = new Date(`${getCurrentDateKey()}T00:00:00`);
@@ -274,7 +286,7 @@ function calculateStreak(tasks, sessions) {
   let previousDate = null;
   for (const dateKey of [...qualifyingDays].sort().reverse()) {
     const date = new Date(`${dateKey}T00:00:00`);
-    if (previousDate && Math.floor((previousDate - date) / (1000 * 60 * 60 * 24)) > 3) break;
+    if (previousDate && Math.floor((previousDate - date) / (1000 * 60 * 60 * 24)) > 2) break;
     streak += 1;
     previousDate = date;
   }
@@ -299,28 +311,116 @@ function getLevelForXp(xp) {
   };
 }
 
+function getMotivationalMessage() {
+  const messages = [
+    '🌟 Every small step counts. Keep going!',
+    '💪 You\'re building great study habits today.',
+    '🎯 Focus on progress, not perfection.',
+    '✨ Your future self will thank you.',
+    '📚 Knowledge is the best investment.',
+    '🔥 You\'re on fire! Keep the momentum.',
+    '🚀 One focused session at a time.',
+    '💡 Smart study beats long study.',
+    '🏆 You\'ve got this!',
+    '⚡ Consistency is the real superpower.',
+    '🌱 Small sessions build big results.',
+    '🎓 Every page turned is progress.',
+  ];
+  return messages[Math.floor(Math.random() * messages.length)];
+}
+
+function getDailyKeepGoingMessage(dateKey) {
+  const messages = [
+    'Start small today and let your progress build.',
+    'One focused session can change the direction of your day.',
+    'Keep showing up. Consistency makes the difference.',
+    'Your effort today is an investment in your future goals.',
+    'Make a little progress now and give yourself momentum.',
+    'Stay focused on the next useful step.',
+    'You do not need a perfect day to make meaningful progress.',
+  ];
+  const dayNumber = Math.floor(new Date(`${dateKey}T00:00:00`).getTime() / (1000 * 60 * 60 * 24));
+  return messages[((dayNumber % messages.length) + messages.length) % messages.length];
+}
+
+function getDailyChallenge(todayTasks, goals, todaysMinutes, profile) {
+  const pendingTodayTasks = todayTasks.filter((task) => !task.completed);
+  const todayGoalMinutes = Number(profile.dailyStudyHours || 0) * 60;
+  const remainingGoalMinutes = Math.max(0, todayGoalMinutes - todaysMinutes);
+  
+  // Priority logic: pick most important challenge
+  if (pendingTodayTasks.length > 0) {
+    return {
+      title: 'Complete a Pending Task',
+      description: `You have ${pendingTodayTasks.length} task${pendingTodayTasks.length === 1 ? '' : 's'} waiting. Pick one and start now.`,
+      emoji: '📝',
+      actionText: 'View Tasks',
+    };
+  }
+  
+  if (remainingGoalMinutes > 0) {
+    return {
+      title: 'Complete Today\'s Study Goal',
+      description: `Study for ${Math.ceil(remainingGoalMinutes)} more minute${Math.ceil(remainingGoalMinutes) === 1 ? '' : 's'} to reach your daily goal.`,
+      emoji: '⏱️',
+      actionText: 'Start Timer',
+    };
+  }
+  
+  if (goals.length === 0) {
+    return {
+      title: 'Set Your First Study Goal',
+      description: 'Create a goal to stay focused and motivated.',
+      emoji: '🎯',
+      actionText: 'Add Goal',
+    };
+  }
+  
+  if (todayTasks.length === 0) {
+    return {
+      title: 'Plan Tomorrow\'s Tasks',
+      description: 'Get ahead by planning your next study session.',
+      emoji: '📅',
+      actionText: 'Add Task',
+    };
+  }
+  
+  return {
+    title: 'Great Work Today!',
+    description: 'You\'ve completed your study goals. Rest well and prepare for tomorrow.',
+    emoji: '✨',
+    actionText: 'View Progress',
+  };
+}
+
 function getGoalsProgress(goals) {
   if (!goals.length) return 0;
   const total = goals.reduce((sum, goal) => sum + Number(goal.progress || 0), 0);
   return Math.round(total / goals.length);
 }
 
-function getOverallProgress({ goalAverage, averageAccuracy, hasGoals, hasQuizHistory }) {
+function getOverallProgress({ goalAverage, averageAccuracy, taskCompletionRate, studyTimeProgress, hasGoals, hasQuizHistory, hasTasks, hasStudyGoal }) {
   const availableMetrics = [
     hasGoals ? goalAverage : null,
     hasQuizHistory ? averageAccuracy : null,
+    hasTasks ? taskCompletionRate : null,
+    hasStudyGoal ? studyTimeProgress : null,
   ].filter((value) => value !== null);
   if (!availableMetrics.length) return 0;
   return Math.round(availableMetrics.reduce((sum, value) => sum + value, 0) / availableMetrics.length);
 }
 
-function getBadges({ xp, streak, quizHistory, completedTasksCount }) {
+function getBadges({ xp, streak, quizHistory, completedTasksCount, sessionCount, goalCount }) {
   return [
     { id: 'first-step', name: '🌱 First Step', unlocked: xp >= 50 },
     { id: 'study-warrior', name: '📚 Study Warrior', unlocked: xp >= 300 },
     { id: 'seven-day', name: '🔥 7 Day Streak', unlocked: streak >= 7 },
     { id: 'goal-crusher', name: '🎯 Goal Crusher', unlocked: completedTasksCount >= 10 },
     { id: 'quiz-master', name: '🏆 Quiz Master', unlocked: quizHistory.length >= 5 },
+    { id: 'first-focus', name: '⏱️ First Focus', unlocked: sessionCount >= 1 },
+    { id: 'goal-setter', name: '📌 Goal Setter', unlocked: goalCount >= 1 },
+    { id: 'quiz-ace', name: '⭐ Quiz Ace', unlocked: quizHistory.some((result) => Number(result.accuracy || 0) >= 90) },
+    { id: 'thirty-day', name: '🔥 30 Day Streak', unlocked: streak >= 30 },
   ];
 }
 
@@ -334,20 +434,36 @@ function getInitialSettings() {
   return { ...defaultSettings, ...storedSettings };
 }
 
+function getInitialProfile() {
+  const storedProfile = readStorage(STORAGE_KEYS.profile, defaultProfile);
+  // Migrate old exam names to new ones
+  if (storedProfile.targetExam === 'JEE') {
+    storedProfile.targetExam = 'JEE MAINS & ADVANCE';
+  }
+  if (storedProfile.targetExam === 'Board') {
+    storedProfile.targetExam = 'BOARDS';
+  }
+  return storedProfile;
+}
+
 function App() {
   const [page, setPage] = useState('home');
   const [showOnboarding, setShowOnboarding] = useState(() => !readStorage(STORAGE_KEYS.onboarding, false));
-  const [profile, setProfile] = useState(() => readStorage(STORAGE_KEYS.profile, defaultProfile));
+  const [profile, setProfile] = useState(getInitialProfile);
   const [tasks, setTasks] = useState(() => readStorage(STORAGE_KEYS.tasks, []));
   const [goals, setGoals] = useState(() => readStorage(STORAGE_KEYS.goals, []));
   const [sessions, setSessions] = useState(() => readStorage(STORAGE_KEYS.sessions, []));
   const [settings, setSettings] = useState(getInitialSettings);
-  const [theme, setTheme] = useState(() => readStorage(STORAGE_KEYS.theme, 'system'));
+  const [theme, setTheme] = useState(() => {
+    const storedTheme = readStorage(STORAGE_KEYS.theme, 'system');
+    return storedTheme === 'aurora' || storedTheme === 'solstice' ? 'system' : storedTheme;
+  });
   const [xp, setXp] = useState(() => Number(readStorage(STORAGE_KEYS.xp, 0)) || 0);
   const [quizHistory, setQuizHistory] = useState(() => readStorage(STORAGE_KEYS.quizHistory, []));
   const [questionBank, setQuestionBank] = useState([]);
-  const [quizExam, setQuizExam] = useState('JEE');
-  const [quizSubject, setQuizSubject] = useState('Physics');
+  const [quizExam, setQuizExam] = useState('');
+  const [quizSubject, setQuizSubject] = useState('');
+  const [motivationalMessage, setMotivationalMessage] = useState(getMotivationalMessage);
   const [quizQuestions, setQuizQuestions] = useState([]);
   const [quizStarted, setQuizStarted] = useState(false);
   const [quizResult, setQuizResult] = useState(null);
@@ -364,21 +480,32 @@ function App() {
   const [confirmClearOpen, setConfirmClearOpen] = useState(false);
   const [deferredInstallPrompt, setDeferredInstallPrompt] = useState(null);
   const [showInstallHelp, setShowInstallHelp] = useState(false);
+  const [showInstallPrompt, setShowInstallPrompt] = useState(false);
   const [sessionSummary, setSessionSummary] = useState(null);
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [timerRunning, setTimerRunning] = useState(false);
   const [timerFinished, setTimerFinished] = useState(false);
   const [fullScreen, setFullScreen] = useState(false);
+  const [timerLandscape, setTimerLandscape] = useState(false);
+  const [timerOnlyMode, setTimerOnlyMode] = useState(false);
   const [calendarDate, setCalendarDate] = useState(getCurrentDateKey());
   const [selectedNav, setSelectedNav] = useState('home');
   const [currentDateKey, setCurrentDateKey] = useState(getCurrentDateKey());
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [utilityReturnPage, setUtilityReturnPage] = useState('home');
+  const [utilityHistory, setUtilityHistory] = useState([]);
   const intervalRef = useRef(null);
+  const focusModeRef = useRef(null);
 
   const todayTasks = useMemo(() => getTodayTasks(tasks), [tasks]);
   const dueTasks = useMemo(() => getDueTasks(tasks), [tasks, currentDateKey]);
   const upcomingTasks = useMemo(() => getUpcomingTasks(tasks), [tasks]);
+  const taskStats = useMemo(() => ({
+    total: tasks.length,
+    completed: tasks.filter((task) => task.completed).length,
+    pending: tasks.filter((task) => !task.completed).length,
+    overdue: dueTasks.length,
+  }), [tasks, dueTasks]);
   const weakSubjects = useMemo(() => getWeakSubjectNames(profile.weakSubjects), [profile.weakSubjects]);
   const weakSubjectTasks = useMemo(
     () => tasks.filter((task) => !task.completed && weakSubjects.includes(String(task.subject || '').trim().toLowerCase())),
@@ -394,8 +521,8 @@ function App() {
   const streakProgress = Math.min(100, (todaysMinutes / 10) * 100);
   const levelInfo = useMemo(() => getLevelForXp(xp), [xp]);
   const badges = useMemo(
-    () => getBadges({ xp, streak, quizHistory, completedTasksCount: tasks.filter((task) => task.completed).length }),
-    [xp, streak, quizHistory, tasks],
+    () => getBadges({ xp, streak, quizHistory, completedTasksCount: tasks.filter((task) => task.completed).length, sessionCount: sessions.length, goalCount: goals.length }),
+    [xp, streak, quizHistory, tasks, sessions.length, goals.length],
   );
   const weeklySummary = useMemo(() => {
     const now = new Date();
@@ -480,7 +607,13 @@ function App() {
       const upcomingNotice = tomorrowTask ? ` ${tomorrowTask.name} is due tomorrow.` : '';
       if (!dueTasks.length && !examNotice && !upcomingNotice) return;
       const taskNotice = dueTasks.length ? `${dueTasks.length} due study task${dueTasks.length === 1 ? '' : 's'}.` : '';
-      new Notification('EduMe Notification Reminder', { body: `${taskNotice}${upcomingNotice}${examNotice}`, icon: '/icon.svg' });
+      
+      try {
+        new Notification('EduMe Notification Reminder', { body: `${taskNotice}${upcomingNotice}${examNotice}`, icon: '/icon-192.png' });
+      } catch (error) {
+        console.error('Error sending notification:', error);
+      }
+      
       writeStorage(STORAGE_KEYS.notificationLastShown, today);
     };
 
@@ -513,10 +646,16 @@ function App() {
         ? streak ? `Study for 10 minutes to keep your ${streak}-day streak going.` : 'Study for 10 minutes to start your streak.'
         : '';
       const quizMessage = completedQuizToday ? '' : 'Take a quiz today to strengthen your preparation.';
-      new Notification('EduMe Study Reminder', {
-        body: `${taskMessage} ${goalMessage} ${streakMessage} ${quizMessage}`.trim(),
-        icon: '/icon.svg',
-      });
+      
+      try {
+        new Notification('EduMe Study Reminder', {
+          body: `${taskMessage} ${goalMessage} ${streakMessage} ${quizMessage}`.trim(),
+          icon: '/icon-192.png',
+        });
+      } catch (error) {
+        console.error('Error sending notification:', error);
+      }
+      
       writeStorage(STORAGE_KEYS.studyReminderLastShown, today);
     };
 
@@ -539,24 +678,18 @@ function App() {
 
   useEffect(() => {
     fetch('/questions.json')
-      .then((response) => response.json())
+      .then((response) => {
+        if (!response.ok) throw new Error('Question bank request failed');
+        return response.json();
+      })
       .then((questions) => setQuestionBank(Array.isArray(questions) ? questions : []))
       .catch(() => setQuestionBank([]));
   }, []);
 
   useEffect(() => {
-    if (examSubjects[quizExam]) {
-      setQuizSubject((prev) => {
-        const valid = examSubjects[quizExam];
-        return valid.includes(prev) ? prev : valid[0];
-      });
-    }
-  }, [quizExam]);
-
-  useEffect(() => {
     const handleEsc = (event) => {
       if (event.key === 'Escape') {
-        setFullScreen(false);
+        closeFocusMode();
         setPlannerModal((current) => ({ ...current, open: false }));
         setGoalModal((current) => ({ ...current, open: false }));
         setDeleteTaskId(null);
@@ -566,6 +699,17 @@ function App() {
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
   }, []);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement && fullScreen) {
+        setFullScreen(false);
+        setTimerLandscape(false);
+      }
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, [fullScreen]);
 
   useEffect(() => {
     if (!timerRunning) {
@@ -602,12 +746,16 @@ function App() {
     const onBeforeInstallPrompt = (event) => {
       event.preventDefault();
       setDeferredInstallPrompt(event);
+      const dismissedAt = Number(readStorage(STORAGE_KEYS.installPromptDismissedAt, 0));
+      const cooldownActive = dismissedAt && Date.now() - dismissedAt < 7 * 24 * 60 * 60 * 1000;
+      setShowInstallPrompt(!cooldownActive);
     };
 
     window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt);
     const onAppInstalled = () => {
       setDeferredInstallPrompt(null);
       setShowInstallHelp(false);
+      setShowInstallPrompt(false);
       triggerToast('✓ EduMe installed successfully');
     };
     window.addEventListener('appinstalled', onAppInstalled);
@@ -620,6 +768,58 @@ function App() {
   const triggerToast = (message) => setToast(message);
   const playSound = (type = 'tap') => {
     if (settings.soundEffects) playFeedbackTone(type);
+  };
+
+  const closeFocusMode = async () => {
+    setFullScreen(false);
+    setTimerLandscape(false);
+    setTimerOnlyMode(false);
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      if (screen.orientation?.unlock) screen.orientation.unlock();
+    } catch (error) {
+      console.error('Error exiting focus mode:', error);
+    }
+  };
+
+  const openFocusMode = async () => {
+    setFullScreen(true);
+    setTimerLandscape(false);
+    setTimerOnlyMode(false);
+    try {
+      if (!document.fullscreenElement) {
+        await (focusModeRef.current || document.documentElement).requestFullscreen();
+      }
+    } catch (error) {
+      triggerToast('Fullscreen or rotation is unavailable in this browser.');
+    }
+  };
+
+  const openTimerOnlyMode = async () => {
+    setFullScreen(true);
+    setTimerLandscape(false);
+    setTimerOnlyMode(true);
+    try {
+      if (!document.fullscreenElement) await document.documentElement.requestFullscreen();
+    } catch {
+      triggerToast('Timer-only fullscreen mode enabled. Rotate your phone for landscape.');
+    }
+  };
+
+  const openFullScreenMode = async () => {
+    await openTimerOnlyMode();
+  };
+
+  const rotateFocusMode = async () => {
+    try {
+      if (!screen.orientation?.lock) throw new Error('Orientation lock is unavailable');
+      await screen.orientation.lock('landscape');
+      setTimerLandscape(true);
+    } catch {
+      const nextLandscape = !timerLandscape;
+      setTimerLandscape(nextLandscape);
+      triggerToast(nextLandscape ? 'Landscape timer mode enabled.' : 'Portrait timer mode enabled.');
+    }
   };
 
   const copySupportEmail = async () => {
@@ -645,29 +845,56 @@ function App() {
   };
 
   const enableNotifications = async () => {
-    if (await requestNotificationPermission()) {
-      setSettings((current) => ({ ...current, notificationReminder: true }));
-      triggerToast('✓ Notifications enabled');
+    try {
+      if (await requestNotificationPermission()) {
+        setSettings((current) => ({ ...current, notificationReminder: true }));
+        triggerToast('✓ Notifications enabled');
+      }
+    } catch (error) {
+      console.error('Error enabling notifications:', error);
+      triggerToast('Notifications are unavailable in this browser.');
     }
   };
 
   const toggleStudyReminder = async () => {
     if (settings.studyReminder) {
       setSettings((current) => ({ ...current, studyReminder: false }));
+      triggerToast('✓ Study reminders disabled');
       return;
     }
-    if (await requestNotificationPermission()) {
-      setSettings((current) => ({ ...current, studyReminder: true }));
-      triggerToast('✓ Study reminders enabled');
+    try {
+      const granted = await requestNotificationPermission();
+      if (granted) {
+        setSettings((current) => ({ ...current, studyReminder: true }));
+        triggerToast('✓ Study reminders enabled');
+      }
+    } catch (error) {
+      console.error('Error enabling study reminders:', error);
+      triggerToast('Error enabling study reminders. Please try again.');
     }
   };
 
   const openUtilityPage = (utilityPage) => {
+    setUtilityHistory((current) => [...current, page]);
     setUtilityReturnPage(page);
     setPage(utilityPage);
   };
 
-  const closeUtilityPage = () => setPage(utilityReturnPage);
+  const navigateToPage = (nextPage) => {
+    setPage(nextPage);
+    if (navItems.some((item) => item.id === nextPage)) {
+      setSelectedNav(nextPage);
+      setUtilityReturnPage(nextPage);
+    }
+  };
+
+  const closeUtilityPage = () => {
+    const returnPage = utilityHistory[utilityHistory.length - 1] || utilityReturnPage || 'home';
+    setUtilityHistory((current) => current.slice(0, -1));
+    setPage(returnPage);
+    setSelectedNav(navItems.some((item) => item.id === returnPage) ? returnPage : 'home');
+    setUtilityReturnPage(utilityHistory[utilityHistory.length - 2] || returnPage);
+  };
 
   const handleInstallPwa = async () => {
     if (!deferredInstallPrompt) {
@@ -683,6 +910,12 @@ function App() {
       triggerToast('Install was dismissed');
     }
     setDeferredInstallPrompt(null);
+    setShowInstallPrompt(false);
+  };
+
+  const dismissInstallPrompt = () => {
+    writeStorage(STORAGE_KEYS.installPromptDismissedAt, Date.now());
+    setShowInstallPrompt(false);
   };
 
   const openPlannerModal = (task = null, selectedDate = getCurrentDateKey()) => {
@@ -721,7 +954,7 @@ function App() {
       const completed = !task.completed;
       wasCompleted = task.completed;
       completedNow = completed;
-      return { ...task, completed };
+      return { ...task, completed, completedAt: completed ? new Date().toISOString() : null };
     }));
     if (completedNow) {
       setXp((current) => current + 25);
@@ -781,7 +1014,7 @@ function App() {
     const xpEarned = Math.floor(durationSeconds / 60) * 2;
     const nextXp = xp + xpEarned;
     const nextLevelInfo = getLevelForXp(nextXp);
-    const nextBadges = getBadges({ xp: nextXp, streak, quizHistory, completedTasksCount: tasks.filter((task) => task.completed).length });
+    const nextBadges = getBadges({ xp: nextXp, streak, quizHistory, completedTasksCount: tasks.filter((task) => task.completed).length, sessionCount: sessions.length + 1, goalCount: goals.length });
     setSessions((current) => {
       const existing = current.filter((item) => item.createdAt !== session.createdAt);
       return [session, ...existing];
@@ -793,32 +1026,6 @@ function App() {
     setSessionSummary({ durationMinutes, xpEarned, level: nextLevelInfo.level, badges: nextBadges });
     playSound('finish');
     triggerToast('✓ Study Session Saved');
-  };
-
-  const handleProfilePhotoUpload = async (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      triggerToast('Please upload a valid image file.');
-      event.target.value = '';
-      return;
-    }
-
-    if (file.size > 2 * 1024 * 1024) {
-      triggerToast('Please choose an image under 2MB.');
-      event.target.value = '';
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = String(reader.result || '');
-      setProfile((current) => ({ ...current, photo: dataUrl }));
-      triggerToast('✓ Profile photo updated');
-      event.target.value = '';
-    };
-    reader.readAsDataURL(file);
   };
 
   const handleProfileSave = (event) => {
@@ -843,6 +1050,8 @@ function App() {
     setXp(0);
     setQuizHistory([]);
     setPage('home');
+    setUtilityHistory([]);
+    setUtilityReturnPage('home');
     setShowOnboarding(true);
     setConfirmClearOpen(false);
     triggerToast('✓ All Data Cleared');
@@ -896,7 +1105,8 @@ function App() {
       setGoals(Array.isArray(data.goals) ? data.goals : []);
       setSessions(Array.isArray(data.sessions) ? data.sessions : []);
       setSettings(nextSettings);
-      setTheme(data.theme || 'system');
+      const importedTheme = data.theme === 'aurora' || data.theme === 'solstice' ? 'system' : (data.theme || 'system');
+      setTheme(importedTheme);
       setQuizHistory(Array.isArray(data.quizHistory) ? data.quizHistory : []);
       setXp(Number(data.xp || 0));
       writeStorage(STORAGE_KEYS.profile, data.profile || defaultProfile);
@@ -904,7 +1114,7 @@ function App() {
       writeStorage(STORAGE_KEYS.goals, Array.isArray(data.goals) ? data.goals : []);
       writeStorage(STORAGE_KEYS.sessions, Array.isArray(data.sessions) ? data.sessions : []);
       writeStorage(STORAGE_KEYS.settings, nextSettings);
-      writeStorage(STORAGE_KEYS.theme, data.theme || 'system');
+      writeStorage(STORAGE_KEYS.theme, importedTheme);
       writeStorage(STORAGE_KEYS.quizHistory, Array.isArray(data.quizHistory) ? data.quizHistory : []);
       writeStorage(STORAGE_KEYS.xp, Number(data.xp || 0));
       writeStorage(STORAGE_KEYS.onboarding, Boolean(data.onboarding ?? false));
@@ -921,11 +1131,24 @@ function App() {
       triggerToast('Quiz database is unavailable.');
       return;
     }
-
-    const pool = questionBank.filter((question) => question.exam === quizExam && question.subject === quizSubject);
-    const selected = [...pool].sort(() => Math.random() - 0.5).slice(0, Math.min(pool.length, 10));
+    if (!quizExam || !quizSubject) {
+      triggerToast('Select an exam and subject first.');
+      return;
+    }
+    const questionExam = quizExamKeys[quizExam];
+    const pool = questionBank.filter((question) => question.exam === questionExam && question.subject === quizSubject);
+    const seenQuestionTexts = new Set();
+    const uniquePool = pool.filter((question) => {
+      const questionText = String(question.question || '').trim().toLowerCase();
+      if (!question.id || !questionText || !Array.isArray(question.options) || question.options.length < 2 || !question.correctAnswer || seenQuestionTexts.has(questionText)) return false;
+      seenQuestionTexts.add(questionText);
+      return true;
+    });
+    const usedQuestionIds = new Set(quizHistory.flatMap((result) => (Array.isArray(result.questionIds) ? result.questionIds : [])));
+    const freshPool = uniquePool.filter((question) => !usedQuestionIds.has(question.id));
+    const selected = [...freshPool].sort(() => Math.random() - 0.5).slice(0, Math.min(10, freshPool.length));
     if (!selected.length) {
-      triggerToast('No questions available for this subject.');
+      triggerToast('You have completed all unique questions for this exam and subject.');
       return;
     }
 
@@ -952,6 +1175,7 @@ function App() {
       date: new Date().toISOString(),
       exam: quizExam,
       subject: quizSubject,
+      questionIds: quizQuestions.map((question) => question.id),
       score: `${correctAnswers} / ${quizQuestions.length}`,
       accuracy,
       correct: correctAnswers,
@@ -962,38 +1186,83 @@ function App() {
     setQuizResult(result);
     setQuizStarted(false);
     setQuizHistory((current) => [result, ...current].slice(0, 50));
-    setXp((current) => current + (correctAnswers * 15) + 30);
+    setXp((current) => current + (correctAnswers * QUIZ_CORRECT_ANSWER_XP) + QUIZ_COMPLETION_XP);
     playSound('finish');
     triggerToast('🎉 Quiz Completed!');
   };
 
   const currentQuestion = quizQuestions[quizStep] || null;
 
-  const renderHome = () => (
-    <div className="page">
+  const renderHome = () => {
+    const recentSessions = [...sessions]
+      .filter((session) => session.createdAt)
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 3);
+
+    return (
+      <div className="page">
       <div className="section-header">
         <div>
           <p className="muted" style={{ margin: 0, fontWeight: 700 }}>Welcome</p>
           <h1 className="greeting">{getGreeting()}, {profile.name || 'Student'} 👋</h1>
+          <p style={{ margin: '12px 0 0 0', color: 'var(--text-soft)', fontSize: 14 }}>{motivationalMessage}</p>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
+            {profile.targetExam && <span className="badge">Target Exam: {profile.targetExam}</span>}
+          </div>
         </div>
       </div>
 
       {renderTimerCard()}
 
-      <div className="home-overview-grid">
-        <div className="card home-focus-panel">
-          <div className="section-header"><div><span className="section-kicker">PRIORITY</span><h2>Weak Subject Focus</h2></div><span className="badge">{weakSubjects.length}</span></div>
-          {weakSubjects.length === 0 ? (
-            <div className="empty-state">Add weak subjects in Profile to get a focused study reminder.</div>
-          ) : (
-            <>
-              <p className="muted" style={{ marginTop: 0 }}>Give these subjects extra attention today.</p>
-              <div className="focus-subject-list">{weakSubjects.map((subject) => <span className="focus-subject" key={subject}>{subject}</span>)}</div>
-              {weakSubjectTasks.length > 0 && <p className="focus-task-hint">{weakSubjectTasks.length} related task{weakSubjectTasks.length === 1 ? '' : 's'} pending</p>}
-            </>
-          )}
+      <div className="task-summary-grid">
+        <div className="task-summary-item task-summary-total">
+          <div style={{ fontSize: 20, marginBottom: 4 }}>📝</div>
+          <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>Total Tasks</div>
+          <strong style={{ fontSize: 18 }}>{taskStats.total}</strong>
         </div>
-        <div className="card exam-countdown-panel">
+        <div className="task-summary-item task-summary-pending">
+          <div style={{ fontSize: 20, marginBottom: 4 }}>⏳</div>
+          <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>Pending</div>
+          <strong style={{ fontSize: 18 }}>{taskStats.pending}</strong>
+        </div>
+        <div className="task-summary-item task-summary-completed">
+          <div style={{ fontSize: 20, marginBottom: 4 }}>✅</div>
+          <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>Completed</div>
+          <strong style={{ fontSize: 18 }}>{taskStats.completed}</strong>
+        </div>
+        <div className="task-summary-item task-summary-overdue">
+          <div style={{ fontSize: 20, marginBottom: 4 }}>⚠️</div>
+          <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>Overdue</div>
+          <strong style={{ fontSize: 18 }}>{taskStats.overdue}</strong>
+        </div>
+      </div>
+
+      {(() => {
+        const challenge = getDailyChallenge(todayTasks, goals, todaysMinutes, profile);
+        return (
+          <div className="card" style={{ padding: 16, marginBottom: 16, borderLeft: '4px solid var(--accent)' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+              <div style={{ fontSize: 32 }}>{challenge.emoji}</div>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ margin: '0 0 8px 0' }}>{challenge.title}</h3>
+                <p style={{ margin: '0 0 12px 0', color: 'var(--text-soft)', fontSize: 14 }}>{challenge.description}</p>
+                <button className="primary-btn" style={{ fontSize: 13, padding: '8px 12px' }} onClick={() => {
+                  if (challenge.actionText === 'View Tasks') navigateToPage('planner');
+                  else if (challenge.actionText === 'Start Timer') { playSound('tap'); setTimerFinished(false); setTimerRunning(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+                  else if (challenge.actionText === 'Add Goal') setGoalModal({ open: true, mode: 'create', goal: null });
+                  else if (challenge.actionText === 'Add Task') openPlannerModal();
+                  else if (challenge.actionText === 'View Progress') navigateToPage('progress');
+                }}>
+                  {challenge.actionText} →
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      <div className="home-overview-grid">
+        <div className="card exam-countdown-panel home-exam-panel-full">
           <div className="section-header"><div><span className="section-kicker">EXAM COUNTDOWN</span><h2>Your Upcoming Exam</h2></div><span className="badge">{profile.examDate ? formatShortDate(profile.examDate) : 'Set date'}</span></div>
           {examDaysRemaining === null ? (
             <div className="empty-state">Add an exam date in Profile to see the countdown here.</div>
@@ -1002,6 +1271,25 @@ function App() {
           )}
         </div>
       </div>
+
+      {!tasks.length && !sessions.length && !goals.length && !quizHistory.length && (
+        <div className="card inset-panel home-focus-panel">
+          <div className="section-header">
+            <div><span className="section-kicker">START HERE</span><h2 style={{ marginBottom: 6 }}>Your first study day</h2></div>
+            <span className="badge">4 simple steps</span>
+          </div>
+          <div className="grid" style={{ gap: 10 }}>
+            <div className="task-item"><strong>1. Complete Profile</strong><span className="muted">Add your exam, class, and weak subjects.</span></div>
+            <div className="task-item"><strong>2. Add a Task</strong><span className="muted">Plan what you want to study today.</span></div>
+            <div className="task-item"><strong>3. Start Studying</strong><span className="muted">Use the focus timer and record your session.</span></div>
+            <div className="task-item"><strong>4. Take a Quiz</strong><span className="muted">Choose your exam and subject to practise.</span></div>
+          </div>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 14 }}>
+            <button className="primary-btn" onClick={() => navigateToPage('profile')}>Complete Profile</button>
+            <button className="ghost-btn" onClick={() => navigateToPage('planner')}>Add First Task</button>
+          </div>
+        </div>
+      )}
 
       <div className="home-grid">
         <div className="stack">
@@ -1030,7 +1318,7 @@ function App() {
           <div className="card list-card home-panel-tasks">
             <div className="section-header">
               <h2>Due Tasks</h2>
-              <button className="ghost-btn" onClick={() => setPage('planner')}>View all</button>
+              <button className="ghost-btn" onClick={() => navigateToPage('planner')}>View all</button>
             </div>
             {dueTasks.length === 0 ? (
               <div className="empty-state">No pending due tasks. Keep planning ahead.</div>
@@ -1077,13 +1365,8 @@ function App() {
             )}
           </div>
 
-          <div className="card list-card home-panel-study-time">
-            <div className="section-header"><h3>Study Time</h3></div>
-            <div style={{ fontSize: '2rem', fontWeight: 800 }}>{formatTimeDisplay(todaysMinutes * 60)}</div>
-          </div>
-
           <div className="card list-card home-panel-goals">
-            <div className="section-header"><h3>Goals</h3><button className="ghost-btn" onClick={() => setPage('planner')}>Manage</button></div>
+            <div className="section-header"><h3>Goals</h3><button className="ghost-btn" onClick={() => navigateToPage('planner')}>Manage</button></div>
             {activeGoals.length === 0 ? (
               <div className="empty-state">No goals yet. Create your first study goal.</div>
             ) : (
@@ -1094,7 +1377,7 @@ function App() {
                       <strong>{goal.name}</strong>
                       <div className="muted">{goal.progress || 0}% complete</div>
                     </div>
-                    <button className="secondary-btn" onClick={() => setPage('planner')}>Open</button>
+                    <button className="secondary-btn" onClick={() => navigateToPage('planner')}>Open</button>
                   </div>
                 ))}
               </div>
@@ -1104,15 +1387,32 @@ function App() {
           <div className="card list-card home-panel-actions">
             <div className="section-header"><h3>Quick Actions</h3></div>
             <div className="grid" style={{ gap: 10 }}>
-              <button className="primary-btn" onClick={() => setPage('planner')}>Start Studying</button>
+              <button className="primary-btn" onClick={() => { playSound('tap'); setTimerFinished(false); setTimerRunning(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>Start Studying</button>
               <button className="secondary-btn" onClick={() => openPlannerModal()}>Add Task</button>
               <button className="ghost-btn" onClick={() => setGoalModal({ open: true, mode: 'create', goal: null })}>Add Goal</button>
             </div>
           </div>
         </div>
       </div>
+
+      <div className="card list-card home-panel-activity">
+        <div className="section-header"><h3>Recent Activity</h3><button className="ghost-btn" onClick={() => navigateToPage('progress')}>View progress</button></div>
+        {recentSessions.length === 0 ? (
+          <div className="empty-state">Complete a study session to see your recent activity.</div>
+        ) : (
+          <div>
+            {recentSessions.map((session) => (
+              <div className="task-item" key={session.id}>
+                <div><strong>Focus session</strong><div className="muted">{new Date(session.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} · {new Date(session.createdAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</div></div>
+                <span className="badge">{formatTimeDisplay(Number(session.durationSeconds) || (Number(session.durationMinutes) || 0) * 60)} · +{Math.floor((Number(session.durationSeconds) || (Number(session.durationMinutes) || 0) * 60) / 60) * 2} XP</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
-  );
+    );
+  };
 
   const renderPlanner = () => (
     <div className="page planner-page">
@@ -1233,59 +1533,31 @@ function App() {
           <div className="card inset-panel quiz-panel quiz-setup-panel">
         <div className="section-header"><h2>Profile</h2></div>
         <form className="form-grid" onSubmit={handleProfileSave}>
-          <div style={{ gridColumn: '1 / -1' }}>
-            <label className="muted" style={{ display: 'block', marginBottom: 10 }}>Profile Photo</label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-              <div style={{ width: 80, height: 80, borderRadius: '50%', overflow: 'hidden', border: '2px solid var(--border)', background: 'var(--card-alt)', display: 'grid', placeItems: 'center' }}>
-                {profile.photo ? (
-                  <img src={profile.photo} alt="Profile preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                  <span style={{ fontSize: 32 }}>👤</span>
-                )}
-              </div>
-              <div>
-                <button type="button" className="secondary-btn" onClick={() => document.getElementById('profile-photo-upload').click()}>
-                  Upload Photo
-                </button>
-                <input id="profile-photo-upload" type="file" accept="image/*" hidden onChange={handleProfilePhotoUpload} />
-                {profile.photo && (
-                  <button
-                    type="button"
-                    className="ghost-btn"
-                    style={{ marginLeft: 8 }}
-                    onClick={() => setProfile((current) => ({ ...current, photo: '' }))}
-                  >
-                    Remove
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
           <div>
             <label className="muted" style={{ display: 'block', marginBottom: 8 }}>Name</label>
-            <input className="input" value={profile.name} onChange={(e) => setProfile((current) => ({ ...current, name: e.target.value }))} />
+            <input className="input" value={profile.name} onChange={(e) => setProfile((current) => ({ ...current, name: e.target.value }))} placeholder="Fill Your Name" />
           </div>
           <div>
             <label className="muted" style={{ display: 'block', marginBottom: 8 }}>Target Exam</label>
             <select className="select" value={profile.targetExam} onChange={(e) => setProfile((current) => ({ ...current, targetExam: e.target.value }))}>
-              <option>UPSC</option><option>JEE</option><option>NEET</option><option>CUET</option><option>SSC</option><option>NDA</option><option>Other</option>
+              <option value="" disabled>Select Your Exam</option><option>JEE MAINS & ADVANCE</option><option>NEET</option><option>BOARDS</option><option>UPSC</option><option>NDA</option><option>SSC</option><option>CUET</option><option>CA</option><option>OTHER</option>
             </select>
           </div>
           <div>
             <label className="muted" style={{ display: 'block', marginBottom: 8 }}>Exam Date</label>
-            <input className="input" type="date" value={profile.examDate} onChange={(e) => setProfile((current) => ({ ...current, examDate: e.target.value }))} />
+            <input className="input" type="date" value={profile.examDate} onChange={(e) => setProfile((current) => ({ ...current, examDate: e.target.value }))} aria-label="Select Your Exam Date" />
           </div>
           <div>
             <label className="muted" style={{ display: 'block', marginBottom: 8 }}>Class</label>
-            <input className="input" value={profile.className} onChange={(e) => setProfile((current) => ({ ...current, className: e.target.value }))} placeholder="12" />
+            <input className="input" value={profile.className} onChange={(e) => setProfile((current) => ({ ...current, className: e.target.value }))} placeholder="Fill Your Class" />
           </div>
           <div>
             <label className="muted" style={{ display: 'block', marginBottom: 8 }}>Weak Subjects</label>
-            <input className="input" value={profile.weakSubjects} onChange={(e) => setProfile((current) => ({ ...current, weakSubjects: e.target.value }))} placeholder="Physics, Mathematics" />
+            <input className="input" value={profile.weakSubjects} onChange={(e) => setProfile((current) => ({ ...current, weakSubjects: e.target.value }))} placeholder="Fill Your Weak Subjects" />
           </div>
           <div>
             <label className="muted" style={{ display: 'block', marginBottom: 8 }}>Daily Study Hours</label>
-            <input className="input" type="number" min="1" max="24" value={profile.dailyStudyHours} onChange={(e) => setProfile((current) => ({ ...current, dailyStudyHours: e.target.value }))} />
+            <input className="input" type="number" min="1" max="24" value={profile.dailyStudyHours} onChange={(e) => setProfile((current) => ({ ...current, dailyStudyHours: e.target.value }))} placeholder="Enter Daily Study Hours" />
           </div>
           <button className="primary-btn" type="submit">Save Profile</button>
         </form>
@@ -1337,13 +1609,13 @@ function App() {
           <div className="card" style={{ padding: 16 }}>
             <h3>Theme</h3>
             <div className="nav-row">
-              {['light', 'dark', 'aurora', 'system'].map((option) => (
+              {['light', 'dark', 'system'].map((option) => (
                 <button
                   key={option}
                   className={theme === option ? 'primary-btn' : 'ghost-btn'}
                   onClick={() => setTheme(option)}
                 >
-                  {option === 'light' ? 'Light' : option === 'dark' ? 'Dark' : option === 'aurora' ? 'Aurora Premium' : 'System Default'}
+                  {option === 'light' ? 'Light' : option === 'dark' ? 'Dark' : 'System Default'}
                 </button>
               ))}
             </div>
@@ -1360,7 +1632,7 @@ function App() {
 
           <div className="card" style={{ padding: 16 }}>
             <h3>📲 Install App</h3>
-            <p className="muted">Install EduMe as a PWA and use it like a mobile app.</p>
+            <p className="muted">Install EduMe as a PWA and use it like a mobile app. After installation, check your app drawer if it does not appear on the home screen.</p>
             <button className="primary-btn" onClick={handleInstallPwa}>
               {deferredInstallPrompt ? 'Install EduMe' : 'Show install steps'}
             </button>
@@ -1387,8 +1659,6 @@ function App() {
   );
 
   const renderQuiz = () => {
-    const availableSubjects = examSubjects[quizExam] || [];
-
     if (!quizStarted && !quizResult) {
       return (
         <div className="page">
@@ -1397,18 +1667,19 @@ function App() {
             <div className="form-grid">
               <div>
                 <label className="muted" style={{ display: 'block', marginBottom: 8 }}>Select Exam</label>
-                <select className="select" value={quizExam} onChange={(event) => setQuizExam(event.target.value)}>
-                  <option value="JEE">JEE</option>
+                <select className="select" value={quizExam} onChange={(event) => { const nextExam = event.target.value; setQuizExam(nextExam); setQuizSubject(examSubjects[nextExam]?.[0] || ''); }}>
+                  <option value="" disabled>Select Your Exam</option>
+                  <option value="JEE MAINS & ADVANCE">JEE MAINS & ADVANCE</option>
                   <option value="NEET">NEET</option>
-                  <option value="Board">Board</option>
+                  <option value="BOARDS">BOARDS</option>
+                  <option value="CA">CA</option>
                 </select>
               </div>
               <div>
                 <label className="muted" style={{ display: 'block', marginBottom: 8 }}>Select Subject</label>
-                <select className="select" value={quizSubject} onChange={(event) => setQuizSubject(event.target.value)}>
-                  {availableSubjects.map((subject) => (
-                    <option key={subject} value={subject}>{subject}</option>
-                  ))}
+                <select className="select" value={quizSubject} onChange={(event) => setQuizSubject(event.target.value)} disabled={!quizExam}>
+                  <option value="" disabled>Select Your Subject</option>
+                  {(examSubjects[quizExam] || []).map((subject) => <option key={subject} value={subject}>{subject}</option>)}
                 </select>
               </div>
               <button className="primary-btn" onClick={startQuiz}>Start Quiz</button>
@@ -1424,7 +1695,7 @@ function App() {
                 {quizHistory.slice(0, 5).map((entry) => (
                   <div key={entry.id} className="card" style={{ padding: 12 }}>
                     <strong>{entry.exam} · {entry.subject}</strong>
-                    <div className="muted">{entry.score} · {entry.accuracy}%</div>
+                    <div className="muted">{entry.score} · {entry.accuracy}% · {new Date(entry.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} {new Date(entry.date).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</div>
                   </div>
                 ))}
               </div>
@@ -1493,18 +1764,31 @@ function App() {
   };
 
   const renderProgress = () => {
-    const tasksCompleted = tasks.filter((task) => task.completed).length;
+    const tasksCompleted = taskStats.completed;
+    const tasksPending = taskStats.pending;
+    const tasksOverdue = taskStats.overdue;
+    const taskTotal = taskStats.total;
+    const reportQuizUnavailable = profile.targetExam && !quizExamKeys[profile.targetExam];
     const averageAccuracy = quizHistory.length ? Math.round(quizHistory.reduce((sum, entry) => sum + Number(entry.accuracy || 0), 0) / quizHistory.length) : 0;
+    const taskCompletionRate = taskTotal ? Math.round((tasksCompleted / taskTotal) * 100) : 0;
+    const studyTimeProgress = todayGoalMinutes > 0 ? Math.min(100, Math.round((weeklySummary.minutes / (todayGoalMinutes * 7)) * 100)) : 0;
+    const studyTrend = getStudyTrend(sessions);
+    const bestStudyDay = studyTrend.reduce((best, day) => day.minutes > best.minutes ? day : best, studyTrend[0]);
+    const latestQuiz = quizHistory[0] || null;
     const goalAverage = goals.length ? Math.round(goals.reduce((sum, goal) => sum + Number(goal.progress || 0), 0) / goals.length) : 0;
     const overallProgress = getOverallProgress({
       goalAverage,
       averageAccuracy,
+      taskCompletionRate,
+      studyTimeProgress,
       hasGoals: goals.length > 0,
       hasQuizHistory: quizHistory.length > 0,
+      hasTasks: taskTotal > 0,
+      hasStudyGoal: todayGoalMinutes > 0,
     });
 
     return (
-      <div className="page">
+      <div className="page progress-page">
         <div className="progress-hero">
           <div>
             <span className="eyebrow">YOUR LEARNING SNAPSHOT</span>
@@ -1513,11 +1797,12 @@ function App() {
             <div className="hero-pills">
               <span className="report-pill">🔥 {streak} day streak</span>
               <span className="report-pill">⚡ Level {levelInfo.level}</span>
+              {profile.targetExam && <span className="report-pill">🎯 {profile.targetExam}</span>}
             </div>
           </div>
           <div className="overall-score">
             <div className="score-ring" style={{ '--score': `${overallProgress * 3.6}deg` }}><strong>{overallProgress}%</strong></div>
-            <span>overall progress</span>
+            <span>Overall Progress</span>
           </div>
         </div>
 
@@ -1526,19 +1811,35 @@ function App() {
           <div className="progress-stat progress-stat-violet"><span>Today&apos;s study time</span><strong>{formatTimeDisplay(todaysMinutes * 60)}</strong><small>Keep the streak alive</small></div>
           <div className="progress-stat progress-stat-teal"><span>Weekly study time</span><strong>{formatTimeDisplay(weeklySummary.minutes * 60)}</strong><small>Your last 7 days</small></div>
           <div className="progress-stat progress-stat-orange"><span>Monthly study time</span><strong>{formatTimeDisplay(monthlySummary.minutes * 60)}</strong><small>Long-term consistency</small></div>
-          <div className="progress-stat progress-stat-pink"><span>Tasks completed</span><strong>{tasksCompleted}</strong><small>One step at a time</small></div>
+          <div className="progress-stat progress-stat-pink"><span>Total study sessions</span><strong>{sessions.length}</strong><small>Every session counts</small></div>
         </div>
 
-        <div className="report-section-heading report-section-heading-02"><span className="section-kicker">02</span><div><h3>Learning wins</h3><p className="muted">The numbers behind your growth.</p></div></div>
+        <div className="report-section-heading report-section-heading-02"><span className="section-kicker">02</span><div><h3>Task Statistics</h3><p className="muted">Overview of your task progress and workload.</p></div></div>
+        <div className="progress-stat-grid task-stat-grid">
+          <div className="progress-stat progress-stat-blue"><span>📝 Total Tasks</span><strong>{taskTotal}</strong><small>All your study tasks</small></div>
+          <div className="progress-stat progress-stat-green"><span>✅ Completed</span><strong>{tasksCompleted}</strong><small>Great work!</small></div>
+          <div className="progress-stat progress-stat-orange"><span>⏳ Pending</span><strong>{tasksPending}</strong><small>Ready to tackle</small></div>
+          <div className="progress-stat progress-stat-red"><span>⚠️ Overdue</span><strong>{tasksOverdue}</strong><small>Priority items</small></div>
+        </div>
+
+        <div className="report-section-heading report-section-heading-03"><span className="section-kicker">03</span><div><h3>Learning wins</h3><p className="muted">The numbers behind your growth.</p></div></div>
         <div className="progress-stat-grid progress-stat-grid-compact">
           <div className="progress-stat progress-stat-blue"><span>Goals progress</span><strong>{goalAverage}%</strong><div className="mini-progress"><span style={{ width: `${goalAverage}%` }} /></div></div>
-          <div className="progress-stat progress-stat-green"><span>Quiz accuracy</span><strong>{averageAccuracy}%</strong><div className="mini-progress"><span style={{ width: `${averageAccuracy}%` }} /></div></div>
-          <div className="progress-stat progress-stat-indigo"><span>Quiz attempts</span><strong>{quizHistory.length}</strong><small>Practice builds confidence</small></div>
+          <div className="progress-stat progress-stat-green"><span>Quiz accuracy</span>{reportQuizUnavailable ? <><strong>Unavailable</strong><small>Quiz is currently unavailable for this exam.</small></> : <><strong>{averageAccuracy}%</strong><div className="mini-progress"><span style={{ width: `${averageAccuracy}%` }} /></div></>}</div>
+          <div className="progress-stat progress-stat-indigo"><span>Quiz attempts</span>{reportQuizUnavailable ? <><strong>Unavailable</strong><small>Quiz is currently unavailable for this exam.</small></> : <><strong>{quizHistory.length}</strong><small>Practice builds confidence</small></>}</div>
           <div className="progress-stat progress-stat-gold"><span>Total XP</span><strong>{xp}</strong><small>{levelInfo.currentLevelXp} / 250 to next level</small></div>
+          <div className="progress-stat progress-stat-pink"><span>Latest quiz score</span>{reportQuizUnavailable || !latestQuiz ? <><strong>{reportQuizUnavailable ? 'Unavailable' : 'No data'}</strong><small>{reportQuizUnavailable ? 'Quiz is currently unavailable for this exam.' : 'Complete a quiz to see your score.'}</small></> : <><strong>{latestQuiz.score}</strong><small>{latestQuiz.accuracy}% accuracy</small></>}</div>
         </div>
 
-        <div className="level-panel card report-section-03">
-          <div className="section-header"><div><span className="section-kicker">03</span><h3>Next level unlocked</h3></div><strong className="highlight-text">Level {levelInfo.level}</strong></div>
+        <div className="report-section-heading report-section-heading-04"><span className="section-kicker">04</span><div><h3>Study insights</h3><p className="muted">A closer look at your recent study pattern.</p></div></div>
+        <div className="progress-stat-grid progress-stat-grid-compact">
+          <div className="progress-stat progress-stat-teal"><span>Best study day</span><strong>{bestStudyDay.minutes ? `${Math.round(bestStudyDay.minutes)} min` : 'No data'}</strong><small>{bestStudyDay.minutes ? bestStudyDay.label : 'Complete a session to see your best day.'}</small></div>
+          <div className="progress-stat progress-stat-orange"><span>Average daily study</span><strong>{formatTimeDisplay((weeklySummary.minutes / 7) * 60)}</strong><small>Based on the last 7 days</small></div>
+          <div className="progress-stat progress-stat-blue"><span>Weekly share of monthly time</span><strong>{monthlySummary.minutes ? `${Math.round((weeklySummary.minutes / monthlySummary.minutes) * 100)}%` : 'No data'}</strong><small>Weekly study time compared with this month</small></div>
+        </div>
+
+        <div className="level-panel card report-section-05">
+          <div className="section-header"><div><span className="section-kicker">05</span><h3>Next level unlocked</h3></div><strong className="highlight-text">Level {levelInfo.level}</strong></div>
           <div className="progress-bar"><span style={{ width: `${levelInfo.progress}%` }} /></div>
           <div className="level-meta"><span>{levelInfo.progress}% complete</span><span>{250 - levelInfo.currentLevelXp} XP to go</span></div>
         </div>
@@ -1569,23 +1870,53 @@ function App() {
 
   const downloadReport = (period) => {
     try {
-      const totalStudy = period === 'weekly' ? weeklySummary.minutes : monthlySummary.minutes;
+      const now = new Date();
+      const periodStart = new Date(now);
+      const periodEnd = new Date(now);
+      if (period === 'weekly') {
+        periodStart.setDate(now.getDate() - 6);
+        periodStart.setHours(0, 0, 0, 0);
+      } else {
+        periodStart.setDate(1);
+        periodStart.setHours(0, 0, 0, 0);
+        periodEnd.setMonth(now.getMonth() + 1, 0);
+        periodEnd.setHours(23, 59, 59, 999);
+      }
+      if (period === 'weekly') periodEnd.setHours(23, 59, 59, 999);
+      const isInPeriod = (dateValue) => {
+        const date = new Date(dateValue);
+        return !Number.isNaN(date.getTime()) && date >= periodStart && date <= periodEnd;
+      };
+      const periodSessions = sessions.filter((session) => isInPeriod(session.createdAt));
+      const periodTasks = tasks.filter((task) => task.completed && isInPeriod(task.completedAt || `${task.date}T23:59:59`));
+      const periodQuizzes = quizHistory.filter((entry) => isInPeriod(entry.date));
+      const totalStudy = periodSessions.reduce((sum, session) => sum + ((Number(session.durationSeconds) || (Number(session.durationMinutes) || 0) * 60) / 60), 0);
+      const periodQuizAccuracy = periodQuizzes.length ? Math.round(periodQuizzes.reduce((sum, entry) => sum + Number(entry.accuracy || 0), 0) / periodQuizzes.length) : 0;
+      const periodXp = periodSessions.reduce((sum, session) => sum + (Math.floor((Number(session.durationSeconds) || (Number(session.durationMinutes) || 0) * 60) / 60) * 2), 0)
+        + (periodTasks.length * 25)
+        + periodQuizzes.reduce((sum, entry) => sum + (Number(entry.correct || 0) * QUIZ_CORRECT_ANSWER_XP) + QUIZ_COMPLETION_XP, 0);
       const reportData = {
         name: profile.name || 'Student',
+        targetExam: profile.targetExam || 'Not set',
+        periodLabel: period === 'weekly' ? 'Last 7 days' : new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(new Date()),
+        downloadedAt: new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date()),
         totalStudy,
-        tasksCompleted: tasks.filter((task) => task.completed).length,
+        averageDailyStudy: totalStudy / (period === 'weekly' ? 7 : 30),
+        tasksCompleted: periodTasks.length,
         goalsProgress: getGoalsProgress(goals),
-        quizAttempts: quizHistory.length,
-        quizAccuracy: quizHistory.length ? Math.round(quizHistory.reduce((sum, entry) => sum + Number(entry.accuracy || 0), 0) / quizHistory.length) : 0,
+        quizUnavailable: profile.targetExam && !quizExamKeys[profile.targetExam],
+        quizAttempts: profile.targetExam && !quizExamKeys[profile.targetExam] ? null : periodQuizzes.length,
+        quizAccuracy: profile.targetExam && !quizExamKeys[profile.targetExam] ? null : periodQuizAccuracy,
         streak,
         streakStatus: getStreakStatus({ streak, todaysMinutes }),
-        xp,
+        xp: periodXp,
         level: levelInfo.level,
+        badges,
       };
 
       const chartStudy = Math.min(100, Math.round((reportData.totalStudy / 360) * 100));
       const chartGoals = reportData.goalsProgress;
-      const chartQuiz = reportData.quizAttempts ? reportData.quizAccuracy : 0;
+      const chartQuiz = reportData.quizUnavailable ? 0 : reportData.quizAttempts ? reportData.quizAccuracy : 0;
       const html = `
         <html>
           <head>
@@ -1597,7 +1928,11 @@ function App() {
               .brand { display:flex; align-items:center; gap:12px; font-size:24px; font-weight:800; color:#4c1d95; }
               .badge { background:linear-gradient(135deg,#7c3aed,#db2777); color:#fff; display:inline-block; padding:8px 12px; border-radius:999px; box-shadow:0 8px 18px rgba(124,58,237,.2); }
               .grid { display:grid; grid-template-columns: repeat(2, minmax(180px, 1fr)); gap:14px; }
+              .badge-grid { display:flex; flex-wrap:wrap; align-items:stretch; gap:10px; }
               .stat { background:linear-gradient(135deg,#eef2ff,#ecfeff); border-left:5px solid #4f46e5; border-radius:14px; padding:16px; }
+              .badge-card { flex:0 0 auto; min-width:120px; background:linear-gradient(135deg,#fff7ed,#fdf2f8); border:1px solid #f5b4c8; border-radius:10px; padding:10px; text-align:center; }
+              .badge-card strong { display:block; font-size:13px; color:#9d174d; }
+              .badge-card span { display:block; margin-top:4px; font-size:11px; color:#15803d; font-weight:700; }
               .stat:nth-child(2) { background:linear-gradient(135deg,#ecfdf5,#eff6ff); border-left-color:#14b8a6; }
               .stat:nth-child(3) { background:linear-gradient(135deg,#fff7ed,#fef3c7); border-left-color:#f59e0b; }
               .stat:nth-child(4) { background:linear-gradient(135deg,#fdf2f8,#fce7f3); border-left-color:#db2777; }
@@ -1618,7 +1953,9 @@ function App() {
                 <div class="badge">${period === 'weekly' ? 'Weekly' : 'Monthly'} Report</div>
               </div>
               <p><strong>Student:</strong> ${reportData.name}</p>
-              <p><strong>Period:</strong> ${period === 'weekly' ? 'Last 7 days' : 'Current month'}</p>
+              <p><strong>Target Exam:</strong> ${reportData.targetExam}</p>
+              <p><strong>Period:</strong> ${reportData.periodLabel}</p>
+              <p><strong>Downloaded:</strong> ${reportData.downloadedAt}</p>
             </div>
             <div class="card">
               <h2>Study Summary</h2>
@@ -1628,15 +1965,22 @@ function App() {
                 <div class="stat"><strong>Goals Progress</strong><div>${reportData.goalsProgress}%</div></div>
                 <div class="stat"><strong>Streak</strong><div>${reportData.streak} days</div></div>
                 <div class="stat"><strong>Streak Status</strong><div>${reportData.streakStatus}</div></div>
+                <div class="stat"><strong>Average Daily Study Time</strong><div>${formatTimeDisplay(reportData.averageDailyStudy * 60)}</div></div>
               </div>
             </div>
             <div class="card">
               <h2>Quiz Performance</h2>
               <div class="grid">
-                <div class="stat"><strong>Quiz Attempts</strong><div>${reportData.quizAttempts}</div></div>
-                <div class="stat"><strong>Accuracy</strong><div>${reportData.quizAccuracy}%</div></div>
-                <div class="stat"><strong>XP</strong><div>${reportData.xp}</div></div>
-                <div class="stat"><strong>Level</strong><div>${reportData.level}</div></div>
+                <div class="stat"><strong>Quiz Attempts</strong><div>${reportData.quizUnavailable ? 'Quiz is currently unavailable for this exam.' : reportData.quizAttempts}</div></div>
+                <div class="stat"><strong>Accuracy</strong><div>${reportData.quizUnavailable ? 'Quiz is currently unavailable for this exam.' : `${reportData.quizAccuracy}%`}</div></div>
+                <div class="stat"><strong>XP Earned in Period</strong><div>${reportData.xp}</div></div>
+                <div class="stat"><strong>Current Level</strong><div>${reportData.level}</div></div>
+              </div>
+            </div>
+            <div class="card">
+              <h2>Badges</h2>
+              <div class="badge-grid">
+                ${reportData.badges.filter((badge) => badge.unlocked).map((badge) => `<div class="badge-card"><strong>${badge.name.slice(2)}</strong><span>Unlocked</span></div>`).join('') || '<p>No badges unlocked yet.</p>'}
               </div>
             </div>
             <div class="card">
@@ -1650,7 +1994,7 @@ function App() {
             </div>
             <div class="card">
               <h2>Overall Progress</h2>
-              <p>${Math.min(100, Math.round((chartStudy + chartGoals + chartQuiz) / 3))}% overall progress</p>
+              <p>${Math.min(100, Math.round((chartStudy + chartGoals + chartQuiz) / 3))}% Overall Progress</p>
             </div>
           </body>
         </html>
@@ -1673,7 +2017,7 @@ function App() {
 
   const renderSearch = () => (
     <div className="page">
-      <div className="card inset-panel">
+      <div className="card inset-panel about-page-card">
         <div className="section-header"><h2>Search</h2></div>
         <input className="input" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search tasks or goals" />
         <div style={{ marginTop: 18, display: 'grid', gap: 12 }}>
@@ -1687,14 +2031,14 @@ function App() {
                     <div key={task.id} className="card" style={{ padding: 16 }}>
                       <strong>{task.name}</strong>
                       <div className="muted">{task.subject} · {task.topic || 'General'}</div>
-                      <button className="secondary-btn" style={{ marginTop: 10 }} onClick={() => { setPage('planner'); setCalendarDate(task.date); }}>Open</button>
+                      <button className="secondary-btn" style={{ marginTop: 10 }} onClick={() => { navigateToPage('planner'); setCalendarDate(task.date); }}>Open</button>
                     </div>
                   ))}
                   {filteredSearch.goals.map((goal) => (
                     <div key={goal.id} className="card" style={{ padding: 16 }}>
                       <strong>{goal.name}</strong>
                       <div className="muted">{goal.description || 'Study goal'}</div>
-                      <button className="secondary-btn" style={{ marginTop: 10 }} onClick={() => { setPage('planner'); setGoalModal({ open: true, mode: 'edit', goal }); }}>Open</button>
+                      <button className="secondary-btn" style={{ marginTop: 10 }} onClick={() => { navigateToPage('planner'); setGoalModal({ open: true, mode: 'edit', goal }); }}>Open</button>
                     </div>
                   ))}
                 </>
@@ -1735,36 +2079,40 @@ function App() {
         <div className="section-header"><h2>About EduMe</h2></div>
         <div style={{ display: 'grid', gap: 16 }}>
           <div className="brand"><EduMeLogo /> <span className="highlight-text">EduMe</span></div>
-          <p className="muted" style={{ margin: 0 }}>Your simple study companion.</p>
-          <p style={{ margin: 0 }}>EduMe is a student-focused study companion designed to help students organize their studies, plan tasks, track study time, monitor progress, and stay motivated.</p>
+          <p className="muted" style={{ margin: 0 }}>A focused workspace for better study habits.</p>
+          <p style={{ margin: 0 }}>EduMe is a student-focused study planning and productivity application built to make everyday learning more organized, measurable, and consistent. It brings study planning, task management, goals, focus timing, progress tracking, quizzes, reminders, streaks, and achievement insights together in one simple workspace.</p>
+          <p style={{ margin: 0 }}>With personalized exam and subject settings, weekly and monthly reports, theme preferences, and offline-friendly browser storage, EduMe helps students understand their study patterns and take the next useful step with confidence. EduMe is designed for personal organization and study support, so students can spend less time managing their routine and more time learning.</p>
           <div className="card info-card" style={{ padding: 16 }}>
             <strong className="highlight-text">App Information</strong>
             <ul style={{ margin: '10px 0 0', paddingLeft: 18, lineHeight: 1.8 }}>
               <li>App Name: <span className="highlight-text">EduMe</span></li>
-              <li>Version: 1.0.0</li>
+              <li>Version: <span className="highlight-text">EduMe v1.1</span></li>
               <li>Type: Student Study & Productivity App</li>
               <li>Designed And Developed by <span className="highlight-text">SBM</span></li>
             </ul>
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <button className="secondary-btn" onClick={() => setPage('terms')}>Terms & Conditions</button>
-            <button className="secondary-btn" onClick={() => setPage('privacy')}>Privacy Policy</button>
+            <button className="secondary-btn" onClick={() => openUtilityPage('terms')}>Terms & Conditions</button>
+            <button className="secondary-btn" onClick={() => openUtilityPage('privacy')}>Privacy Policy</button>
           </div>
           <div className="about-support-section">
             <div className="section-header"><div><span className="section-kicker">NEED A HAND?</span><h3>Support</h3></div></div>
-            <p className="muted">Copy the email or send feedback whenever you need help.</p>
+            <p className="muted">Get in touch anytime. We're here to help!</p>
             <div className="support-contact-card">
               <div><span className="muted support-label">Support email</span><strong className="support-email">sbmplayerzofficial@gmail.com</strong></div>
               <button className="secondary-btn" onClick={copySupportEmail}>Copy Email</button>
             </div>
-            <a
-              className="secondary-btn"
-              href="https://docs.google.com/forms/d/e/1FAIpQLSdqB36cDFQygtQrQnnmmutrlWfjb1j0tX-Z6Ad2kA4Z2dnqcw/viewform?usp=sharing&ouid=102268797773322480668"
-              target="_blank"
-              rel="noreferrer"
-            >
-              📝 Send Feedback
-            </a>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <a
+                className="secondary-btn"
+                href="https://docs.google.com/forms/d/e/1FAIpQLSdqB36cDFQygtQrQnnmmutrlWfjb1j0tX-Z6Ad2kA4Z2dnqcw/viewform?usp=sharing&ouid=102268797773322480668"
+                target="_blank"
+                rel="noreferrer"
+                style={{ flex: '1 1 auto', minWidth: 'max-content' }}
+              >
+                📝 Send Feedback
+              </a>
+            </div>
           </div>
         </div>
       </div>
@@ -1774,13 +2122,19 @@ function App() {
   const renderTerms = () => (
     <div className="page">
       <div className="card inset-panel">
-        <div className="section-header"><h2>Terms & Conditions</h2><button className="ghost-btn" onClick={() => { setPage('about'); setSelectedNav('about'); }}>Back</button></div>
-        <div style={{ display: 'grid', gap: 12, lineHeight: 1.7 }} className="muted">
-          <p>EduMe is a local-first study planner for personal organization, study timing, task planning, goals, quizzes, and progress tracking. By using EduMe, you understand that your data is stored in this browser or device and is not automatically backed up online.</p>
-          <p>You are responsible for the accuracy of your profile, tasks, goals, quiz activity, and exam preparation information. EduMe is a productivity tool and does not replace teachers, schools, coaching, or official academic guidance.</p>
-          <p>Study sessions are created when you finish the timer. XP, levels, badges, streaks, and progress are calculated from your locally stored activity. Export your data regularly if you want to keep a backup or move it to another browser.</p>
-          <p>EduMe works without a paid API or account. The optional Feedback button may open an external Google Form, and the Support page provides an email address. Those services are outside EduMe and may have their own terms.</p>
-          <p>Features may change as EduMe is improved. Do not use the app as the only record of important academic deadlines or results.</p>
+        <div className="section-header"><h2>Terms & Conditions</h2><button className="ghost-btn utility-back-btn" onClick={closeUtilityPage} aria-label="Go back" title="Go back">←</button></div>
+        <div style={{ display: 'grid', gap: 18, lineHeight: 1.7 }} className="muted">
+          <section><h3>1. Acceptance of these terms</h3><p>By accessing or using EduMe, you agree to these Terms & Conditions. If you do not agree with any part of these terms, please discontinue use of the application.</p></section>
+          <section><h3>2. About EduMe</h3><p>EduMe is a browser-based study planning and productivity application. It provides tools for organizing tasks, setting goals, tracking study sessions, practicing available quizzes, viewing progress, and generating personal reports.</p></section>
+          <section><h3>3. Personal use and responsibility</h3><p>You may use EduMe for personal, non-commercial study planning. You are responsible for the accuracy of the information you enter, including your profile, exam dates, tasks, goals, quiz activity, and study records.</p></section>
+          <section><h3>4. Educational disclaimer</h3><p>EduMe is a productivity and study-support tool. It is not a school, coaching service, examination authority, teacher, or source of official academic advice. Always verify important dates, requirements, results, and preparation decisions with the relevant official source.</p></section>
+          <section><h3>5. Your data and backups</h3><p>Core app data is stored locally in your browser or device. EduMe does not promise automatic online backup or recovery. You are responsible for exporting backups when needed and for keeping exported files secure.</p></section>
+          <section><h3>6. Acceptable use</h3><p>You must not misuse EduMe, attempt to interfere with its operation, access it through unauthorized methods, introduce malicious code, or use it in a way that violates applicable law or the rights of others.</p></section>
+          <section><h3>7. Availability and changes</h3><p>EduMe is provided on an availability basis. Features, supported exams, quiz content, designs, and functionality may be updated, suspended, or removed without prior notice. Quiz availability may vary by exam and available question data.</p></section>
+          <section><h3>8. Third-party services</h3><p>Support and feedback features may open external services, including Google Forms. Those services are operated independently and are subject to their own terms and privacy policies. EduMe is not responsible for their content, availability, or handling of information.</p></section>
+          <section><h3>9. Intellectual property</h3><p>EduMe, its branding, interface, and original content are owned by or used by SBM and may not be copied, modified, distributed, or commercially exploited without permission.</p></section>
+          <section><h3>10. Limitation of responsibility</h3><p>To the extent permitted by applicable law, EduMe and its developers are not responsible for loss of locally stored data, missed deadlines, inaccurate user-entered information, interruptions, or decisions made solely on the basis of the application.</p></section>
+          <section><h3>11. Contact</h3><p>For questions about these terms, contact <strong>sbmplayerzofficial@gmail.com</strong>.</p></section>
         </div>
       </div>
     </div>
@@ -1789,20 +2143,26 @@ function App() {
   const renderPrivacy = () => (
     <div className="page">
       <div className="card inset-panel">
-        <div className="section-header"><h2>Privacy Policy</h2><button className="ghost-btn" onClick={() => { setPage('about'); setSelectedNav('about'); }}>Back</button></div>
-        <div style={{ display: 'grid', gap: 12, lineHeight: 1.7 }} className="muted">
-          <p>EduMe stores your profile, planner tasks, goals, study sessions, quiz history, theme, settings, streak, XP, and report data locally in your browser&apos;s Local Storage. Profile photos are stored locally as browser data when you upload them.</p>
-          <p>EduMe does not maintain a user account, server-side database, analytics tracker, or paid API for core features. Your local data is not sent to EduMe automatically. Clearing browser site data or using EduMe&apos;s Clear Data option removes local content.</p>
-          <p>Export and import are local browser actions. The generated backup file stays on your device unless you choose to share it. Copy Email only writes the support address to your clipboard after you click it.</p>
-          <p>The optional Feedback button can open a Google Form in a new tab, and Support includes an email address. If you use either option, information you submit is handled by that external service according to its privacy policy.</p>
-          <p>EduMe uses browser capabilities such as Local Storage, Service Workers for offline caching, notifications when permitted, and Web Audio for optional sound effects. No personal information is intentionally sold or tracked by EduMe.</p>
+        <div className="section-header"><h2>Privacy Policy</h2><button className="ghost-btn utility-back-btn" onClick={closeUtilityPage} aria-label="Go back" title="Go back">←</button></div>
+        <div style={{ display: 'grid', gap: 18, lineHeight: 1.7 }} className="muted">
+          <section><h3>1. Overview</h3><p>This Privacy Policy explains how EduMe handles information when you use the application. EduMe is designed as a local-first study planner and does not require an account for its core features.</p></section>
+          <section><h3>2. Information stored locally</h3><p>EduMe may store your name, target exam, exam date, class, weak subjects, tasks, goals, study sessions, quiz history, theme preference, notification settings, sound settings, streak, XP, badges, and generated report-related data in your browser&apos;s Local Storage.</p></section>
+          <section><h3>3. How your information is used</h3><p>This information is used on your device to display your planner, calculate progress, maintain streaks and XP, provide quiz history, show reminders, and generate weekly or monthly reports. Core data is not automatically sent to an EduMe server.</p></section>
+          <section><h3>4. Notifications and browser permissions</h3><p>If you enable reminders and grant browser permission, EduMe may use your browser&apos;s notification feature to show study, task, or exam reminders. You can disable permission or reminders through your browser or the app settings. Optional sound effects use your browser&apos;s audio capability.</p></section>
+          <section><h3>5. Export, import, and deletion</h3><p>Exported backups are created locally and remain on your device unless you choose to share them. Imported data replaces or updates local app data according to the import process. Using EduMe&apos;s Clear Data option or clearing browser site data removes locally stored information. Keep a backup before deleting data.</p></section>
+          <section><h3>6. External services</h3><p>The optional feedback form is hosted by Google Forms. If you submit information there, Google may process it under its own privacy policy. Copying the support email only uses your browser&apos;s clipboard after you request the action.</p></section>
+          <section><h3>7. Analytics and advertising</h3><p>EduMe&apos;s core functionality does not require an account, paid API, advertising profile, or analytics tracker. External services opened by you may use their own cookies, logs, or tracking practices.</p></section>
+          <section><h3>8. Security and retention</h3><p>Local data is protected by the security of your browser, device, and user account. Do not store sensitive information in EduMe. Data remains in local browser storage until you delete it, clear site data, or overwrite it.</p></section>
+          <section><h3>9. Children&apos;s privacy</h3><p>EduMe is intended for students and general educational use. We do not knowingly collect personal information from children through a central EduMe account or database. Parents or guardians should supervise device and browser use where appropriate.</p></section>
+          <section><h3>10. Policy updates</h3><p>This policy may be updated when EduMe&apos;s features or practices change. The latest version will be available in the application with its updated date.</p></section>
+          <section><h3>11. Contact</h3><p>For privacy questions or requests, contact <strong>sbmplayerzofficial@gmail.com</strong>.</p></section>
         </div>
       </div>
     </div>
   );
 
   const renderTimerCard = () => (
-    <div className="card focus-timer-card">
+    <div className={`card focus-timer-card ${timerLandscape ? 'timer-landscape' : ''}`}>
       <div className="section-header">
         <div>
           <span className="section-kicker">FOCUS MODE</span>
@@ -1824,7 +2184,7 @@ function App() {
             <button className="secondary-btn" onClick={() => { playSound('tap'); setTimerRunning(false); }}>Pause</button>
           )}
           <button className="ghost-btn" onClick={() => { playSound('tap'); setTimerFinished(false); setTimerRunning(true); }}>Resume</button>
-          <button className="ghost-btn" onClick={() => setFullScreen(true)}>Full Screen</button>
+          <button className="ghost-btn" onClick={openFocusMode}>Focus Mode</button>
           <button className="danger-btn" onClick={handleTimerFinish}>Finish Session</button>
         </div>
       </div>
@@ -1834,8 +2194,11 @@ function App() {
   const renderNotifications = () => {
     const pendingTodayTasks = todayTasks.filter((task) => !task.completed);
     const upcomingNotificationTasks = upcomingTasks.filter((task) => !task.completed).slice(0, 5);
+    const missedTasks = dueTasks.filter((task) => task.date < currentDateKey && !task.completed).slice(0, 5);
     const remainingGoalMinutes = Math.max(0, todayGoalMinutes - todaysMinutes);
     const completedQuizToday = quizHistory.some((entry) => String(entry.date || '').slice(0, 10) === getCurrentDateKey());
+    const latestQuiz = quizHistory[0] || null;
+    const latestQuizNeedsReview = latestQuiz && Number(latestQuiz.accuracy || 0) < 60;
 
     return (
       <div className="page utility-page">
@@ -1865,14 +2228,29 @@ function App() {
             {dueTasks.length === 0 && upcomingNotificationTasks.length === 0 && <p className="muted">No upcoming tasks. Keep planning ahead.</p>}
           </section>
 
+          <section className="card notification-card notification-missed">
+            <div className="notification-card-title"><span className="notification-symbol">⚠️</span><div><h2>Missed Tasks</h2><span className="muted">Tasks that need your attention</span></div></div>
+            {missedTasks.length > 0 ? <><p><strong>{missedTasks.length} overdue task{missedTasks.length === 1 ? '' : 's'}.</strong> Reschedule or complete them to stay on track.</p>{missedTasks.map((task) => <div className="notification-row" key={task.id}><span>{task.name}</span><span className="badge">{formatShortDate(task.date)}</span></div>)}</> : <p className="muted">You have no missed tasks. Nice work staying on schedule.</p>}
+          </section>
+
           <section className="card notification-card notification-exam">
             <div className="notification-card-title"><span className="notification-symbol">🗓️</span><div><h2>Upcoming Exam</h2><span className="muted">Stay prepared</span></div></div>
             {examDaysRemaining !== null && examDaysRemaining >= 0 ? <p><strong>Exam in {examDaysRemaining} day{examDaysRemaining === 1 ? '' : 's'}.</strong> Review your plan and keep going.</p> : <p className="muted">Add an exam date in Profile to see your countdown.</p>}
           </section>
 
+          <section className="card notification-card notification-streak">
+            <div className="notification-card-title"><span className="notification-symbol">🔥</span><div><h2>Streak Check-in</h2><span className="muted">Protect your daily momentum</span></div></div>
+            <p>{streak > 0 && todaysMinutes === 0 ? `Your ${streak}-day streak is waiting for today&apos;s first focused session.` : streak > 0 ? 'You have already studied today. Keep your streak going.' : 'Study for 10 focused minutes today to start a streak.'}</p>
+          </section>
+
+          <section className="card notification-card notification-quiz">
+            <div className="notification-card-title"><span className="notification-symbol">📝</span><div><h2>Quiz Insight</h2><span className="muted">Turn practice into progress</span></div></div>
+            {latestQuiz ? <p>{latestQuizNeedsReview ? `Your latest quiz score was ${latestQuiz.accuracy}%. Review this subject before your next attempt.` : `Your latest quiz score was ${latestQuiz.accuracy}%. Keep practicing to build confidence.`}</p> : <p className="muted">Take your first quiz to receive a personalized review reminder.</p>}
+          </section>
+
           <section className="card notification-card notification-motivation">
             <div className="notification-card-title"><span className="notification-symbol">✨</span><div><h2>Keep Going</h2><span className="muted">A little progress matters</span></div></div>
-            <p>{streak > 0 ? `You have a ${streak}-day streak. Small sessions keep your momentum strong.` : 'Start with 10 focused minutes today and build your first streak.'}</p>
+            <p>{getDailyKeepGoingMessage(currentDateKey)}</p>
           </section>
         </div>
       </div>
@@ -1921,11 +2299,11 @@ function App() {
         </div>
         <div style={{ display: 'grid', gap: 16 }}>
           {[
-            { title: 'Welcome to EduMe 👋', text: 'Your simple study companion.' },
-            { title: '📚 Organize your study', text: 'Plan and manage your study tasks easily.' },
-            { title: '⏱️ Track your study time', text: 'Understand how much time you spend studying.' },
-            { title: '🎯 Set your goals', text: 'Keep your study goals visible and stay consistent.' },
-            { title: '🏆 Build your study habits', text: 'Maintain your study consistency and stay motivated.' },
+            { title: 'Welcome to EduMe 👋', text: 'Start with your Profile: add your exam, class, and weak subjects.' },
+            { title: '📚 Plan your day', text: 'Open Planner, choose a date, and press Add Task for each study topic.' },
+            { title: '⏱️ Study with focus', text: 'Press Start Studying on Home, choose a duration, and finish the session.' },
+            { title: '📝 Practise with Quiz', text: 'Open Quiz, select your exam and subject, then answer each question.' },
+            { title: '📊 Check your progress', text: 'Open Progress to see study time, streaks, XP, goals, and quiz accuracy.' },
           ].map((slide, index) => (
             <div key={index} className="card" style={{ padding: 18 }}>
               <h3 style={{ margin: '0 0 8px' }}>{slide.title}</h3>
@@ -1953,8 +2331,8 @@ function App() {
           <header className="topbar">
             <div className="brand"><EduMeLogo /> <span>EduMe</span></div>
             <div className="topbar-actions">
-              <button className="icon-btn utility-header-btn" onClick={() => openUtilityPage('streak')} aria-label={`Study streak: ${streak} days`} title={`Study streak: ${streak} days`}>
-                <span aria-hidden="true">🔥</span><strong>{streak}</strong>
+              <button className="icon-btn utility-header-btn streak-header-btn" onClick={() => openUtilityPage('streak')} aria-label={`Study streak: ${streak} days`} title={`Study streak: ${streak} days`}>
+                <span aria-hidden="true" className="streak-header-icon">🔥</span><strong className="streak-header-count">{streak}</strong>
               </button>
               <button className="icon-btn utility-header-btn notification-header-btn" onClick={() => openUtilityPage('notifications')} aria-label="Open notifications" title="Notifications">
                 <span aria-hidden="true">🔔</span>
@@ -1987,7 +2365,7 @@ function App() {
                     <button
                       key={item.id}
                       className={selectedNav === item.id ? 'nav-btn active' : 'nav-btn'}
-                      onClick={() => { setPage(item.id); setSelectedNav(item.id); }}
+                      onClick={() => navigateToPage(item.id)}
                     >
                       {item.icon} {item.label}
                     </button>
@@ -2025,7 +2403,7 @@ function App() {
               <button
                 key={item.id}
                 className={selectedNav === item.id ? 'nav-item active' : 'nav-item'}
-                onClick={() => { setPage(item.id); setSelectedNav(item.id); setMobileMenuOpen(false); }}
+                onClick={() => { navigateToPage(item.id); setMobileMenuOpen(false); }}
               >
                 <span>{item.icon}</span>
                 <span>{item.label}</span>
@@ -2107,12 +2485,33 @@ function App() {
             </div>
           )}
 
-          {fullScreen && (
-            <div className="modal-backdrop" style={{ background: 'rgba(15,23,42,0.8)' }} onClick={() => setFullScreen(false)}>
-              <div className="modal" style={{ background: 'var(--card)', padding: 28 }} onClick={(e) => e.stopPropagation()}>
+          {showInstallPrompt && deferredInstallPrompt && (
+            <div className="modal-backdrop install-prompt-backdrop" onClick={() => setShowInstallPrompt(false)}>
+              <div className="modal install-prompt" onClick={(event) => event.stopPropagation()}>
+                <div className="brand"><EduMeLogo /> <span>Install EduMe</span></div>
+                <p className="muted">Install EduMe for quick access and an app-like study experience.</p>
+                <div className="install-prompt-actions">
+                  <button className="ghost-btn" onClick={dismissInstallPrompt}>Not now</button>
+                  <button className="primary-btn" onClick={handleInstallPwa}>Install EduMe</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {fullScreen && timerOnlyMode && (
+            <div className="timer-only-backdrop" onClick={closeFocusMode}>
+              <button className="icon-btn timer-only-back-btn" onClick={closeFocusMode} aria-label="Back to Home" title="Back to Home">←</button>
+              <div className="timer-only-display">{formatTimeDisplay(timerSeconds)}</div>
+            </div>
+          )}
+
+          {fullScreen && !timerOnlyMode && (
+            <div className="modal-backdrop" style={{ background: 'rgba(15,23,42,0.8)' }} onClick={closeFocusMode}>
+              <div ref={focusModeRef} className={`modal focus-mode-modal ${timerLandscape ? 'timer-landscape' : ''}`} style={{ background: 'var(--card)', padding: 28 }} onClick={(e) => e.stopPropagation()}>
                 <div className="section-header">
+                  <button className="icon-btn focus-back-btn" onClick={closeFocusMode} aria-label="Back to Home" title="Back to Home">←</button>
                   <h2>Focus Mode</h2>
-                  <button className="ghost-btn" onClick={() => setFullScreen(false)}>Exit Full Screen</button>
+                  <button className="ghost-btn" onClick={closeFocusMode}>Exit Focus Mode</button>
                 </div>
                 <div className="timer-display" style={{ margin: '18px 0' }}>{formatTimeDisplay(timerSeconds)}</div>
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
@@ -2122,6 +2521,7 @@ function App() {
                     <button className="secondary-btn" onClick={() => { playSound('tap'); setTimerRunning(false); }}>Pause</button>
                   )}
                   <button className="ghost-btn" onClick={() => { playSound('tap'); setTimerFinished(false); setTimerRunning(true); }}>Resume</button>
+                  <button className="ghost-btn" onClick={openFullScreenMode}>Full Screen</button>
                   <button className="danger-btn" onClick={handleTimerFinish}>Finish Session</button>
                 </div>
               </div>
@@ -2129,7 +2529,7 @@ function App() {
           )}
 
           {sessionSummary && (
-            <div className="modal-backdrop" onClick={() => setSessionSummary(null)}>
+            <div className="modal-backdrop celebration-backdrop" onClick={() => setSessionSummary(null)}>
               <div className="modal celebration-modal" onClick={(event) => event.stopPropagation()}>
                 <div className="celebration-icon">🎉</div>
                 <span className="section-kicker">FOCUS SESSION COMPLETE</span>

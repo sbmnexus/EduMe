@@ -318,5 +318,1605 @@
     "question": "The process of taking in food is called:",
     "options": ["Respiration", "Digestion", "Nutrition", "Excretion"],
     "correctAnswer": "Nutrition"
+  },
+  {
+    "id": "jee-physics-5",
+    "exam": "JEE",
+    "subject": "Physics",
+    "question": "The kinetic energy of a body of mass 2 kg moving at 3 m/s is:",
+    "options": ["3 J", "6 J", "9 J", "18 J"],
+    "correctAnswer": "9 J"
+  },
+  {
+    "id": "jee-physics-6",
+    "exam": "JEE",
+    "subject": "Physics",
+    "question": "The dimensional formula of velocity is:",
+    "options": ["[M L T^-1]", "[L T^-1]", "[L T^-2]", "[M L^2 T^-2]"],
+    "correctAnswer": "[L T^-1]"
+  },
+  {
+    "id": "jee-chemistry-5",
+    "exam": "JEE",
+    "subject": "Chemistry",
+    "question": "The number of valence electrons in a carbon atom is:",
+    "options": ["2", "4", "6", "8"],
+    "correctAnswer": "4"
+  },
+  {
+    "id": "jee-chemistry-6",
+    "exam": "JEE",
+    "subject": "Chemistry",
+    "question": "Avogadro's number is approximately:",
+    "options": ["6.022 x 10^23", "9.8 x 10^2", "3.14 x 10^8", "1.602 x 10^-19"],
+    "correctAnswer": "6.022 x 10^23"
+  },
+  {
+    "id": "jee-maths-5",
+    "exam": "JEE",
+    "subject": "Mathematics",
+    "question": "The roots of x^2 - 5x + 6 = 0 are:",
+    "options": ["1 and 6", "2 and 3", "-2 and -3", "0 and 5"],
+    "correctAnswer": "2 and 3"
+  },
+  {
+    "id": "jee-maths-6",
+    "exam": "JEE",
+    "subject": "Mathematics",
+    "question": "The value of log10(100) is:",
+    "options": ["1", "2", "10", "100"],
+    "correctAnswer": "2"
+  },
+  {
+    "id": "neet-physics-5",
+    "exam": "NEET",
+    "subject": "Physics",
+    "question": "The frequency of a wave is 5 Hz. Its time period is:",
+    "options": ["0.2 s", "2 s", "5 s", "10 s"],
+    "correctAnswer": "0.2 s"
+  },
+  {
+    "id": "neet-physics-6",
+    "exam": "NEET",
+    "subject": "Physics",
+    "question": "The acceleration due to gravity near Earth's surface is approximately:",
+    "options": ["3.8 m/s^2", "8.9 m/s^2", "9.8 m/s^2", "98 m/s^2"],
+    "correctAnswer": "9.8 m/s^2"
+  },
+  {
+    "id": "neet-chemistry-5",
+    "exam": "NEET",
+    "subject": "Chemistry",
+    "question": "A solution with pH 3 is:",
+    "options": ["Strongly acidic", "Neutral", "Weakly basic", "Strongly basic"],
+    "correctAnswer": "Strongly acidic"
+  },
+  {
+    "id": "neet-chemistry-6",
+    "exam": "NEET",
+    "subject": "Chemistry",
+    "question": "The gas essential for respiration is:",
+    "options": ["Nitrogen", "Oxygen", "Hydrogen", "Helium"],
+    "correctAnswer": "Oxygen"
+  },
+  {
+    "id": "neet-biology-5",
+    "exam": "NEET",
+    "subject": "Biology",
+    "question": "The functional unit of the kidney is:",
+    "options": ["Neuron", "Nephron", "Alveolus", "Villus"],
+    "correctAnswer": "Nephron"
+  },
+  {
+    "id": "neet-biology-6",
+    "exam": "NEET",
+    "subject": "Biology",
+    "question": "Which organ pumps blood throughout the human body?",
+    "options": ["Liver", "Lung", "Heart", "Kidney"],
+    "correctAnswer": "Heart"
+  },
+  {
+    "id": "board-physics-5",
+    "exam": "Board",
+    "subject": "Physics",
+    "question": "The unit of electrical resistance is:",
+    "options": ["Volt", "Ampere", "Ohm", "Coulomb"],
+    "correctAnswer": "Ohm"
+  },
+  {
+    "id": "board-physics-6",
+    "exam": "Board",
+    "subject": "Physics",
+    "question": "A device that converts electrical energy into mechanical energy is a:",
+    "options": ["Generator", "Motor", "Transformer", "Battery"],
+    "correctAnswer": "Motor"
+  },
+  {
+    "id": "board-chemistry-5",
+    "exam": "Board",
+    "subject": "Chemistry",
+    "question": "The chemical formula of common salt is:",
+    "options": ["NaCl", "KCl", "CaCl2", "Na2CO3"],
+    "correctAnswer": "NaCl"
+  },
+  {
+    "id": "board-chemistry-6",
+    "exam": "Board",
+    "subject": "Chemistry",
+    "question": "Rusting of iron requires oxygen and:",
+    "options": ["Nitrogen", "Water", "Carbon dioxide", "Helium"],
+    "correctAnswer": "Water"
+  },
+  {
+    "id": "board-maths-5",
+    "exam": "Board",
+    "subject": "Mathematics",
+    "question": "The HCF of 12 and 18 is:",
+    "options": ["2", "3", "6", "9"],
+    "correctAnswer": "6"
+  },
+  {
+    "id": "board-maths-6",
+    "exam": "Board",
+    "subject": "Mathematics",
+    "question": "The probability of getting a head when a fair coin is tossed is:",
+    "options": ["0", "1/4", "1/2", "1"],
+    "correctAnswer": "1/2"
+  },
+  {
+    "id": "board-biology-5",
+    "exam": "Board",
+    "subject": "Biology",
+    "question": "The green pigment in plants is called:",
+    "options": ["Haemoglobin", "Chlorophyll", "Melanin", "Keratin"],
+    "correctAnswer": "Chlorophyll"
+  },
+  {
+    "id": "board-biology-6",
+    "exam": "Board",
+    "subject": "Biology",
+    "question": "Which part of the human respiratory system is the site of gas exchange?",
+    "options": ["Trachea", "Alveoli", "Larynx", "Nasal cavity"],
+    "correctAnswer": "Alveoli"
+  },
+  {
+    "id": "board-hindi-1",
+    "exam": "Board",
+    "subject": "Hindi",
+    "question": "'जल' शब्द का समानार्थी शब्द है:",
+    "options": ["अग्नि", "पानी", "आकाश", "वायु"],
+    "correctAnswer": "पानी"
+  },
+  {
+    "id": "board-hindi-2",
+    "exam": "Board",
+    "subject": "Hindi",
+    "question": "'दिन' का विलोम शब्द है:",
+    "options": ["सुबह", "दोपहर", "रात", "प्रकाश"],
+    "correctAnswer": "रात"
+  },
+  {
+    "id": "board-hindi-3",
+    "exam": "Board",
+    "subject": "Hindi",
+    "question": "'विद्यालय' शब्द में कौन-सा समास है?",
+    "options": ["द्वंद्व", "तत्पुरुष", "बहुव्रीहि", "अव्ययीभाव"],
+    "correctAnswer": "तत्पुरुष"
+  },
+  {
+    "id": "board-hindi-4",
+    "exam": "Board",
+    "subject": "Hindi",
+    "question": "'सुंदर' का भाववाचक संज्ञा रूप है:",
+    "options": ["सुंदरी", "सुंदरता", "सुंदरतम", "सुंदराई"],
+    "correctAnswer": "सुंदरता"
+  },
+  {
+    "id": "board-english-1",
+    "exam": "Board",
+    "subject": "English",
+    "question": "Choose the synonym of 'happy':",
+    "options": ["Sad", "Joyful", "Angry", "Tired"],
+    "correctAnswer": "Joyful"
+  },
+  {
+    "id": "board-english-2",
+    "exam": "Board",
+    "subject": "English",
+    "question": "Choose the correct plural of 'child':",
+    "options": ["Childs", "Childes", "Children", "Childrens"],
+    "correctAnswer": "Children"
+  },
+  {
+    "id": "board-english-3",
+    "exam": "Board",
+    "subject": "English",
+    "question": "Choose the correct article: She bought ___ umbrella.",
+    "options": ["a", "an", "the", "no article"],
+    "correctAnswer": "an"
+  },
+  {
+    "id": "board-english-4",
+    "exam": "Board",
+    "subject": "English",
+    "question": "What is the past tense of 'go'?",
+    "options": ["Goed", "Gone", "Went", "Going"],
+    "correctAnswer": "Went"
+  },
+  {
+    "id": "jee-physics-7",
+    "exam": "JEE",
+    "subject": "Physics",
+    "question": "A projectile is fired with speed u at angle theta. Its maximum range on level ground is obtained when theta is:",
+    "options": ["30 degrees", "45 degrees", "60 degrees", "90 degrees"],
+    "correctAnswer": "45 degrees"
+  },
+  {
+    "id": "jee-physics-8",
+    "exam": "JEE",
+    "subject": "Physics",
+    "question": "A capacitor of capacitance C is charged to potential V. The energy stored in it is:",
+    "options": ["CV", "CV^2", "1/2 CV^2", "2CV^2"],
+    "correctAnswer": "1/2 CV^2"
+  },
+  {
+    "id": "jee-chemistry-7",
+    "exam": "JEE",
+    "subject": "Chemistry",
+    "question": "For a first-order reaction, the half-life is:",
+    "options": ["Dependent on initial concentration", "Independent of initial concentration", "Always zero", "Proportional to concentration squared"],
+    "correctAnswer": "Independent of initial concentration"
+  },
+  {
+    "id": "jee-chemistry-8",
+    "exam": "JEE",
+    "subject": "Chemistry",
+    "question": "Which compound gives a positive iodoform test?",
+    "options": ["Methanol", "Ethanol", "Propanol", "Phenol"],
+    "correctAnswer": "Ethanol"
+  },
+  {
+    "id": "jee-maths-7",
+    "exam": "JEE",
+    "subject": "Mathematics",
+    "question": "The value of the determinant |1 1; 2 3| is:",
+    "options": ["1", "2", "3", "5"],
+    "correctAnswer": "1"
+  },
+  {
+    "id": "jee-maths-8",
+    "exam": "JEE",
+    "subject": "Mathematics",
+    "question": "If vectors a and b are perpendicular, then their dot product is:",
+    "options": ["|a||b|", "0", "|a| + |b|", "1"],
+    "correctAnswer": "0"
+  },
+  {
+    "id": "neet-physics-7",
+    "exam": "NEET",
+    "subject": "Physics",
+    "question": "In a series LCR circuit at resonance, the impedance is:",
+    "options": ["Maximum", "Minimum and equal to R", "Zero always", "Equal to XL + XC"],
+    "correctAnswer": "Minimum and equal to R"
+  },
+  {
+    "id": "neet-physics-8",
+    "exam": "NEET",
+    "subject": "Physics",
+    "question": "The magnifying power of a simple microscope increases when its focal length:",
+    "options": ["Increases", "Decreases", "Becomes infinite", "Equals zero only"],
+    "correctAnswer": "Decreases"
+  },
+  {
+    "id": "neet-chemistry-7",
+    "exam": "NEET",
+    "subject": "Chemistry",
+    "question": "The hybridisation of carbon in benzene is:",
+    "options": ["sp", "sp2", "sp3", "dsp2"],
+    "correctAnswer": "sp2"
+  },
+  {
+    "id": "neet-chemistry-8",
+    "exam": "NEET",
+    "subject": "Chemistry",
+    "question": "A buffer solution resists a change in:",
+    "options": ["Temperature only", "pH on adding small acid or base", "Volume only", "Colour only"],
+    "correctAnswer": "pH on adding small acid or base"
+  },
+  {
+    "id": "neet-biology-7",
+    "exam": "NEET",
+    "subject": "Biology",
+    "question": "In the lac operon, the inducer commonly prevents the repressor from binding to the:",
+    "options": ["Promoter", "Operator", "Ribosome", "Terminator"],
+    "correctAnswer": "Operator"
+  },
+  {
+    "id": "neet-biology-8",
+    "exam": "NEET",
+    "subject": "Biology",
+    "question": "The antibody-producing cells derived from activated B lymphocytes are:",
+    "options": ["Plasma cells", "Helper T cells", "Macrophages", "Memory-free red cells"],
+    "correctAnswer": "Plasma cells"
+  },
+  {
+    "id": "board-physics-7",
+    "exam": "Board",
+    "subject": "Physics",
+    "question": "According to Gauss's law, the electric flux through a closed surface depends on the:",
+    "options": ["Shape only", "Charge enclosed by the surface", "Surface area only", "External charges only"],
+    "correctAnswer": "Charge enclosed by the surface"
+  },
+  {
+    "id": "board-physics-8",
+    "exam": "Board",
+    "subject": "Physics",
+    "question": "In Young's double-slit experiment, fringe width increases when the wavelength of light:",
+    "options": ["Decreases", "Increases", "Becomes zero", "Is independent of wavelength"],
+    "correctAnswer": "Increases"
+  },
+  {
+    "id": "board-chemistry-7",
+    "exam": "Board",
+    "subject": "Chemistry",
+    "question": "The unit of the rate constant for a first-order reaction is:",
+    "options": ["mol L^-1 s^-1", "s^-1", "L mol^-1 s^-1", "mol^2 L^-2 s^-1"],
+    "correctAnswer": "s^-1"
+  },
+  {
+    "id": "board-chemistry-8",
+    "exam": "Board",
+    "subject": "Chemistry",
+    "question": "The coordination number of the central metal ion in [Co(NH3)6]Cl3 is:",
+    "options": ["3", "4", "6", "9"],
+    "correctAnswer": "6"
+  },
+  {
+    "id": "board-maths-7",
+    "exam": "Board",
+    "subject": "Mathematics",
+    "question": "If f(x) = x^3, then f'(2) is:",
+    "options": ["4", "8", "12", "16"],
+    "correctAnswer": "12"
+  },
+  {
+    "id": "board-maths-8",
+    "exam": "Board",
+    "subject": "Mathematics",
+    "question": "The distance between the points (1, 2) and (4, 6) is:",
+    "options": ["3", "4", "5", "7"],
+    "correctAnswer": "5"
+  },
+  {
+    "id": "board-biology-7",
+    "exam": "Board",
+    "subject": "Biology",
+    "question": "The hormone that lowers blood glucose level is:",
+    "options": ["Glucagon", "Insulin", "Adrenaline", "Thyroxine"],
+    "correctAnswer": "Insulin"
+  },
+  {
+    "id": "board-biology-8",
+    "exam": "Board",
+    "subject": "Biology",
+    "question": "The enzyme that joins DNA fragments during recombinant DNA technology is:",
+    "options": ["DNA ligase", "Amylase", "Lipase", "Pepsin"],
+    "correctAnswer": "DNA ligase"
+  },
+  {
+    "id": "board-hindi-5",
+    "exam": "Board",
+    "subject": "Hindi",
+    "question": "'जो मेहनत करता है, वही सफल होता है' वाक्य किस प्रकार का है?",
+    "options": ["सरल वाक्य", "संयुक्त वाक्य", "मिश्र वाक्य", "विस्मयादिबोधक वाक्य"],
+    "correctAnswer": "मिश्र वाक्य"
+  },
+  {
+    "id": "board-hindi-6",
+    "exam": "Board",
+    "subject": "Hindi",
+    "question": "'आँखों का तारा' मुहावरे का अर्थ है:",
+    "options": ["बहुत प्रिय व्यक्ति", "बहुत दूर व्यक्ति", "क्रोधित व्यक्ति", "आलसी व्यक्ति"],
+    "correctAnswer": "बहुत प्रिय व्यक्ति"
+  },
+  {
+    "id": "board-english-5",
+    "exam": "Board",
+    "subject": "English",
+    "question": "Choose the correct form: If I had known, I ___ you.",
+    "options": ["will tell", "would tell", "would have told", "am telling"],
+    "correctAnswer": "would have told"
+  },
+  {
+    "id": "board-english-6",
+    "exam": "Board",
+    "subject": "English",
+    "question": "The figure of speech in 'The wind whispered through the trees' is:",
+    "options": ["Simile", "Metaphor", "Personification", "Oxymoron"],
+    "correctAnswer": "Personification"
+  },
+  {
+    "id": "jee-physics-9",
+    "exam": "JEE",
+    "subject": "Physics",
+    "question": "A block is projected up a rough inclined plane with initial speed u and coefficient of friction mu. The distance travelled before stopping is:",
+    "options": ["u^2/[2g(sin theta + mu cos theta)]", "u^2/[2g(sin theta - mu cos theta)]", "u/[g(sin theta + mu cos theta)]", "u^2/[g cos theta]"],
+    "correctAnswer": "u^2/[2g(sin theta + mu cos theta)]"
+  },
+  {
+    "id": "jee-physics-10",
+    "exam": "JEE",
+    "subject": "Physics",
+    "question": "A charged particle enters a uniform magnetic field with velocity having both parallel and perpendicular components. Its path is:",
+    "options": ["A straight line", "A circle in a plane", "A helix", "A parabola"],
+    "correctAnswer": "A helix"
+  },
+  {
+    "id": "jee-physics-11",
+    "exam": "JEE",
+    "subject": "Physics",
+    "question": "In a compound microscope, increasing the magnifying power while keeping the objective focal length fixed requires the eyepiece focal length to:",
+    "options": ["Increase", "Decrease", "Become equal to objective focal length", "Have no relation"],
+    "correctAnswer": "Decrease"
+  },
+  {
+    "id": "jee-physics-12",
+    "exam": "JEE",
+    "subject": "Physics",
+    "question": "For a series AC circuit, resonance occurs when:",
+    "options": ["XL = XC", "XL > XC", "XL < XC", "R = 0"],
+    "correctAnswer": "XL = XC"
+  },
+  {
+    "id": "jee-chemistry-9",
+    "exam": "JEE",
+    "subject": "Chemistry",
+    "question": "For an ideal solution, the partial vapour pressure of a component is given by:",
+    "options": ["p_i = x_i p_i^0", "p_i = p_i^0/x_i", "p_i = x_i + p_i^0", "p_i = x_i - p_i^0"],
+    "correctAnswer": "p_i = x_i p_i^0"
+  },
+  {
+    "id": "jee-chemistry-10",
+    "exam": "JEE",
+    "subject": "Chemistry",
+    "question": "The major product of dehydration of 2-methyl-2-butanol is formed according to:",
+    "options": ["Markovnikov addition", "Saytzeff rule", "Anti-Markovnikov addition", "Hoffmann rule only"],
+    "correctAnswer": "Saytzeff rule"
+  },
+  {
+    "id": "jee-chemistry-11",
+    "exam": "JEE",
+    "subject": "Chemistry",
+    "question": "A galvanic cell reaction is spontaneous when its standard cell potential is:",
+    "options": ["Positive", "Negative", "Exactly zero only", "Independent of sign"],
+    "correctAnswer": "Positive"
+  },
+  {
+    "id": "jee-chemistry-12",
+    "exam": "JEE",
+    "subject": "Chemistry",
+    "question": "The number of geometrical isomers possible for [Pt(NH3)2Cl2] is:",
+    "options": ["1", "2", "3", "4"],
+    "correctAnswer": "2"
+  },
+  {
+    "id": "jee-maths-9",
+    "exam": "JEE",
+    "subject": "Mathematics",
+    "question": "The maximum value of x(1-x) for 0 <= x <= 1 is:",
+    "options": ["1/4", "1/2", "1", "2"],
+    "correctAnswer": "1/4"
+  },
+  {
+    "id": "jee-maths-10",
+    "exam": "JEE",
+    "subject": "Mathematics",
+    "question": "The general solution of dy/dx = y is:",
+    "options": ["y = x + C", "y = Ce^x", "y = Cx", "y = e^C x"],
+    "correctAnswer": "y = Ce^x"
+  },
+  {
+    "id": "jee-maths-11",
+    "exam": "JEE",
+    "subject": "Mathematics",
+    "question": "If A is a 3 x 3 matrix and |A| = 2, then |3A| equals:",
+    "options": ["6", "9", "18", "54"],
+    "correctAnswer": "54"
+  },
+  {
+    "id": "jee-maths-12",
+    "exam": "JEE",
+    "subject": "Mathematics",
+    "question": "The distance of the point (1, 2, 3) from the plane x + 2y + 2z = 9 is:",
+    "options": ["1/3", "2/3", "1", "3"],
+    "correctAnswer": "2/3"
+  },
+  {
+    "id": "neet-physics-9",
+    "exam": "NEET",
+    "subject": "Physics",
+    "question": "In photoelectric effect, the stopping potential depends primarily on the:",
+    "options": ["Intensity of light", "Frequency of light", "Area of metal", "Exposure time only"],
+    "correctAnswer": "Frequency of light"
+  },
+  {
+    "id": "neet-physics-10",
+    "exam": "NEET",
+    "subject": "Physics",
+    "question": "A convex lens forms a real image twice the size of the object when the object is placed:",
+    "options": ["At 2F", "Between F and 2F", "At F", "Between optical centre and F"],
+    "correctAnswer": "Between F and 2F"
+  },
+  {
+    "id": "neet-physics-11",
+    "exam": "NEET",
+    "subject": "Physics",
+    "question": "The rms speed of gas molecules is proportional to:",
+    "options": ["T", "1/T", "Square root of T", "T squared"],
+    "correctAnswer": "Square root of T"
+  },
+  {
+    "id": "neet-physics-12",
+    "exam": "NEET",
+    "subject": "Physics",
+    "question": "When two resistors are connected in parallel, the equivalent resistance is:",
+    "options": ["Greater than both", "Equal to their sum", "Less than the smaller resistor", "Equal to the larger resistor"],
+    "correctAnswer": "Less than the smaller resistor"
+  },
+  {
+    "id": "neet-chemistry-9",
+    "exam": "NEET",
+    "subject": "Chemistry",
+    "question": "The oxidation state of chromium in K2Cr2O7 is:",
+    "options": ["+3", "+4", "+6", "+7"],
+    "correctAnswer": "+6"
+  },
+  {
+    "id": "neet-chemistry-10",
+    "exam": "NEET",
+    "subject": "Chemistry",
+    "question": "Which reagent distinguishes an aldehyde from a ketone?",
+    "options": ["Tollens reagent", "Conc. H2SO4", "NaCl solution", "Bromide ion only"],
+    "correctAnswer": "Tollens reagent"
+  },
+  {
+    "id": "neet-chemistry-11",
+    "exam": "NEET",
+    "subject": "Chemistry",
+    "question": "The pH of a strong acid solution increases when it is:",
+    "options": ["Diluted with water", "Heated without dilution always", "Mixed with more acid", "Evaporated to dryness"],
+    "correctAnswer": "Diluted with water"
+  },
+  {
+    "id": "neet-chemistry-12",
+    "exam": "NEET",
+    "subject": "Chemistry",
+    "question": "The shape of an ammonia molecule is:",
+    "options": ["Linear", "Trigonal planar", "Trigonal pyramidal", "Tetrahedral without lone pair"],
+    "correctAnswer": "Trigonal pyramidal"
+  },
+  {
+    "id": "neet-biology-9",
+    "exam": "NEET",
+    "subject": "Biology",
+    "question": "Crossing over during meiosis occurs between:",
+    "options": ["Sister chromatids", "Non-sister chromatids of homologous chromosomes", "Unrelated chromosomes only", "Centromeres"],
+    "correctAnswer": "Non-sister chromatids of homologous chromosomes"
+  },
+  {
+    "id": "neet-biology-10",
+    "exam": "NEET",
+    "subject": "Biology",
+    "question": "The pyramid of energy in an ecosystem is always:",
+    "options": ["Inverted", "Upright", "Spindle-shaped", "Absent"],
+    "correctAnswer": "Upright"
+  },
+  {
+    "id": "neet-biology-11",
+    "exam": "NEET",
+    "subject": "Biology",
+    "question": "The enzyme responsible for joining Okazaki fragments is:",
+    "options": ["DNA ligase", "DNA helicase", "RNA polymerase", "Restriction enzyme"],
+    "correctAnswer": "DNA ligase"
+  },
+  {
+    "id": "neet-biology-12",
+    "exam": "NEET",
+    "subject": "Biology",
+    "question": "In human females, ovulation is triggered primarily by a surge of:",
+    "options": ["FSH", "LH", "Estrogen only", "Progesterone only"],
+    "correctAnswer": "LH"
+  },
+  {
+    "id": "board-physics-9",
+    "exam": "Board",
+    "subject": "Physics",
+    "question": "The energy stored in an inductor carrying current I is:",
+    "options": ["LI", "1/2 LI^2", "L/I", "2LI^2"],
+    "correctAnswer": "1/2 LI^2"
+  },
+  {
+    "id": "board-physics-10",
+    "exam": "Board",
+    "subject": "Physics",
+    "question": "In a p-n junction diode under forward bias, the depletion layer width:",
+    "options": ["Increases", "Decreases", "Remains exactly unchanged", "Becomes infinite"],
+    "correctAnswer": "Decreases"
+  },
+  {
+    "id": "board-physics-11",
+    "exam": "Board",
+    "subject": "Physics",
+    "question": "The phenomenon that proves the wave nature of light is:",
+    "options": ["Photoelectric effect", "Compton effect", "Interference", "Pair production"],
+    "correctAnswer": "Interference"
+  },
+  {
+    "id": "board-physics-12",
+    "exam": "Board",
+    "subject": "Physics",
+    "question": "The binding energy per nucleon is maximum for nuclei near:",
+    "options": ["Hydrogen", "Iron", "Uranium", "Helium only"],
+    "correctAnswer": "Iron"
+  },
+  {
+    "id": "board-chemistry-9",
+    "exam": "Board",
+    "subject": "Chemistry",
+    "question": "The colligative property used to determine molar mass of polymers is:",
+    "options": ["Relative lowering of vapour pressure", "Osmotic pressure", "Elevation of boiling point only", "Depression of freezing point only"],
+    "correctAnswer": "Osmotic pressure"
+  },
+  {
+    "id": "board-chemistry-10",
+    "exam": "Board",
+    "subject": "Chemistry",
+    "question": "The role of a salt bridge in an electrochemical cell includes:",
+    "options": ["Stopping ion movement", "Maintaining electrical neutrality", "Increasing electrode mass only", "Providing electrons to solution"],
+    "correctAnswer": "Maintaining electrical neutrality"
+  },
+  {
+    "id": "board-chemistry-11",
+    "exam": "Board",
+    "subject": "Chemistry",
+    "question": "Aldehydes are generally more reactive than ketones towards nucleophilic addition because aldehydes have:",
+    "options": ["More steric hindrance", "Less steric hindrance and weaker electron donation", "No carbonyl group", "A permanent positive charge"],
+    "correctAnswer": "Less steric hindrance and weaker electron donation"
+  },
+  {
+    "id": "board-chemistry-12",
+    "exam": "Board",
+    "subject": "Chemistry",
+    "question": "The coordination entity in [Cu(NH3)4]SO4 is:",
+    "options": ["SO4", "Cu", "[Cu(NH3)4]2+", "NH3 only"],
+    "correctAnswer": "[Cu(NH3)4]2+"
+  },
+  {
+    "id": "board-maths-9",
+    "exam": "Board",
+    "subject": "Mathematics",
+    "question": "The value of integral from 0 to 1 of 2x dx is:",
+    "options": ["0", "1/2", "1", "2"],
+    "correctAnswer": "1"
+  },
+  {
+    "id": "board-maths-10",
+    "exam": "Board",
+    "subject": "Mathematics",
+    "question": "If two events A and B are independent, then P(A intersection B) equals:",
+    "options": ["P(A)+P(B)", "P(A)P(B)", "P(A)/P(B)", "P(A)-P(B)"],
+    "correctAnswer": "P(A)P(B)"
+  },
+  {
+    "id": "board-maths-11",
+    "exam": "Board",
+    "subject": "Mathematics",
+    "question": "The direction ratios of a line perpendicular to both (1, 2, 3) and (2, -1, 1) are proportional to:",
+    "options": ["(5, 5, -5) or (-5, -5, 5)", "(5, -5, 5)", "(1, 2, 3)", "(2, -1, 1)"],
+    "correctAnswer": "(5, 5, -5) or (-5, -5, 5)"
+  },
+  {
+    "id": "board-maths-12",
+    "exam": "Board",
+    "subject": "Mathematics",
+    "question": "The function f(x) = |x| is not differentiable at:",
+    "options": ["x = -1", "x = 0", "x = 1", "Every real x"],
+    "correctAnswer": "x = 0"
+  },
+  {
+    "id": "board-biology-9",
+    "exam": "Board",
+    "subject": "Biology",
+    "question": "PCR amplification of DNA requires a thermostable enzyme called:",
+    "options": ["Taq polymerase", "Pepsin", "DNA ligase only", "Cellulase"],
+    "correctAnswer": "Taq polymerase"
+  },
+  {
+    "id": "board-biology-10",
+    "exam": "Board",
+    "subject": "Biology",
+    "question": "A test cross is performed between an individual of unknown genotype and:",
+    "options": ["A homozygous dominant individual", "A homozygous recessive individual", "Any heterozygous individual", "A mutant only"],
+    "correctAnswer": "A homozygous recessive individual"
+  },
+  {
+    "id": "board-biology-11",
+    "exam": "Board",
+    "subject": "Biology",
+    "question": "The first antibody produced during a primary immune response is usually:",
+    "options": ["IgG", "IgM", "IgA", "IgE"],
+    "correctAnswer": "IgM"
+  },
+  {
+    "id": "board-biology-12",
+    "exam": "Board",
+    "subject": "Biology",
+    "question": "The transfer of pollen grains from anther to stigma of the same flower is called:",
+    "options": ["Geitonogamy", "Autogamy", "Xenogamy", "Apomixis"],
+    "correctAnswer": "Autogamy"
+  },
+  {
+    "id": "board-hindi-7",
+    "exam": "Board",
+    "subject": "Hindi",
+    "question": "'वह इतना थक गया कि चलते-चलते सो गया' वाक्य में कौन-सा उपवाक्य है?",
+    "options": ["संज्ञा उपवाक्य", "विशेषण उपवाक्य", "क्रियाविशेषण उपवाक्य", "प्रधान उपवाक्य नहीं"],
+    "correctAnswer": "क्रियाविशेषण उपवाक्य"
+  },
+  {
+    "id": "board-hindi-8",
+    "exam": "Board",
+    "subject": "Hindi",
+    "question": "काव्य में शब्दों की पुनरावृत्ति से उत्पन्न सौंदर्य किस अलंकार का उदाहरण है?",
+    "options": ["अनुप्रास", "उपमा", "रूपक", "उत्प्रेक्षा"],
+    "correctAnswer": "अनुप्रास"
+  },
+  {
+    "id": "board-english-7",
+    "exam": "Board",
+    "subject": "English",
+    "question": "In formal writing, the most suitable opening for a complaint letter is:",
+    "options": ["Hey, I am angry", "I am writing to bring to your notice", "You must listen now", "What's up with this issue?"],
+    "correctAnswer": "I am writing to bring to your notice"
+  },
+  {
+    "id": "board-english-8",
+    "exam": "Board",
+    "subject": "English",
+    "question": "Choose the correct reported speech: He said, 'I am preparing for the examination.'",
+    "options": ["He said that he was preparing for the examination.", "He said that I am preparing for the examination.", "He says that he was preparing for the examination.", "He said he prepares examination."],
+    "correctAnswer": "He said that he was preparing for the examination."
+  },
+  {
+    "id": "jee-physics-13",
+    "exam": "JEE",
+    "subject": "Physics",
+    "question": "The escape velocity from the surface of a planet depends on its mass M and radius R as:",
+    "options": ["sqrt(GM/R)", "sqrt(2GM/R)", "2GM/R", "GM/R^2"],
+    "correctAnswer": "sqrt(2GM/R)"
+  },
+  {
+    "id": "jee-physics-14",
+    "exam": "JEE",
+    "subject": "Physics",
+    "question": "Two resistors of 6 ohm and 3 ohm are connected in parallel. Their equivalent resistance is:",
+    "options": ["1 ohm", "2 ohm", "3 ohm", "9 ohm"],
+    "correctAnswer": "2 ohm"
+  },
+  {
+    "id": "jee-chemistry-13",
+    "exam": "JEE",
+    "subject": "Chemistry",
+    "question": "The shape of the BF3 molecule is:",
+    "options": ["Linear", "Trigonal planar", "Tetrahedral", "Pyramidal"],
+    "correctAnswer": "Trigonal planar"
+  },
+  {
+    "id": "jee-chemistry-14",
+    "exam": "JEE",
+    "subject": "Chemistry",
+    "question": "The catalyst used in the Haber process is:",
+    "options": ["Iron", "Nickel", "Platinum", "Copper"],
+    "correctAnswer": "Iron"
+  },
+  {
+    "id": "jee-maths-13",
+    "exam": "JEE",
+    "subject": "Mathematics",
+    "question": "The integral of 2x with respect to x is:",
+    "options": ["x^2 + C", "2x^2 + C", "x + C", "2 + C"],
+    "correctAnswer": "x^2 + C"
+  },
+  {
+    "id": "jee-maths-14",
+    "exam": "JEE",
+    "subject": "Mathematics",
+    "question": "The coefficient of x^2 in (1 + x)^4 is:",
+    "options": ["2", "4", "6", "8"],
+    "correctAnswer": "6"
+  },
+  {
+    "id": "neet-physics-13",
+    "exam": "NEET",
+    "subject": "Physics",
+    "question": "The power of a lens with focal length 0.5 m is:",
+    "options": ["0.5 D", "1 D", "2 D", "5 D"],
+    "correctAnswer": "2 D"
+  },
+  {
+    "id": "neet-physics-14",
+    "exam": "NEET",
+    "subject": "Physics",
+    "question": "The rms value of an alternating current with peak value I0 is:",
+    "options": ["I0", "I0/2", "I0/sqrt(2)", "sqrt(2)I0"],
+    "correctAnswer": "I0/sqrt(2)"
+  },
+  {
+    "id": "neet-chemistry-13",
+    "exam": "NEET",
+    "subject": "Chemistry",
+    "question": "The bond present in a molecule of nitrogen gas is:",
+    "options": ["Single", "Double", "Triple", "Coordinate only"],
+    "correctAnswer": "Triple"
+  },
+  {
+    "id": "neet-chemistry-14",
+    "exam": "NEET",
+    "subject": "Chemistry",
+    "question": "The molarity of a solution containing 1 mole solute in 2 litres solution is:",
+    "options": ["0.25 M", "0.5 M", "1 M", "2 M"],
+    "correctAnswer": "0.5 M"
+  },
+  {
+    "id": "neet-biology-13",
+    "exam": "NEET",
+    "subject": "Biology",
+    "question": "The site of protein synthesis in a cell is the:",
+    "options": ["Lysosome", "Ribosome", "Vacuole", "Centrosome"],
+    "correctAnswer": "Ribosome"
+  },
+  {
+    "id": "neet-biology-14",
+    "exam": "NEET",
+    "subject": "Biology",
+    "question": "Which hormone is responsible for ovulation in humans?",
+    "options": ["Insulin", "Luteinising hormone", "Thyroxine", "Melatonin"],
+    "correctAnswer": "Luteinising hormone"
+  },
+  {
+    "id": "board-physics-13",
+    "exam": "Board",
+    "subject": "Physics",
+    "question": "The potential difference across a 4 ohm resistor carrying 2 A current is:",
+    "options": ["2 V", "4 V", "6 V", "8 V"],
+    "correctAnswer": "8 V"
+  },
+  {
+    "id": "board-physics-14",
+    "exam": "Board",
+    "subject": "Physics",
+    "question": "The energy of a photon is directly proportional to its:",
+    "options": ["Wavelength", "Frequency", "Speed only", "Amplitude only"],
+    "correctAnswer": "Frequency"
+  },
+  {
+    "id": "board-chemistry-13",
+    "exam": "Board",
+    "subject": "Chemistry",
+    "question": "The pH of a basic solution is generally:",
+    "options": ["Less than 7", "Equal to 7", "Greater than 7", "Always zero"],
+    "correctAnswer": "Greater than 7"
+  },
+  {
+    "id": "board-chemistry-14",
+    "exam": "Board",
+    "subject": "Chemistry",
+    "question": "The process of coating iron with zinc to prevent rusting is called:",
+    "options": ["Alloying", "Galvanisation", "Distillation", "Crystallisation"],
+    "correctAnswer": "Galvanisation"
+  },
+  {
+    "id": "board-maths-13",
+    "exam": "Board",
+    "subject": "Mathematics",
+    "question": "The sum of the first 10 natural numbers is:",
+    "options": ["45", "50", "55", "60"],
+    "correctAnswer": "55"
+  },
+  {
+    "id": "board-maths-14",
+    "exam": "Board",
+    "subject": "Mathematics",
+    "question": "The slope of the line 2x + 3y = 6 is:",
+    "options": ["2/3", "-2/3", "3/2", "-3/2"],
+    "correctAnswer": "-2/3"
+  },
+  {
+    "id": "board-biology-13",
+    "exam": "Board",
+    "subject": "Biology",
+    "question": "The structural and functional unit of the nervous system is the:",
+    "options": ["Neuron", "Nephron", "Alveolus", "Osteon"],
+    "correctAnswer": "Neuron"
+  },
+  {
+    "id": "board-biology-14",
+    "exam": "Board",
+    "subject": "Biology",
+    "question": "The gas released during photosynthesis is:",
+    "options": ["Carbon dioxide", "Nitrogen", "Oxygen", "Hydrogen"],
+    "correctAnswer": "Oxygen"
+  },
+  {
+    "id": "board-hindi-9",
+    "exam": "Board",
+    "subject": "Hindi",
+    "question": "'कमल' शब्द का पर्यायवाची है:",
+    "options": ["पंकज", "पर्वत", "पवन", "पाषाण"],
+    "correctAnswer": "पंकज"
+  },
+  {
+    "id": "board-hindi-10",
+    "exam": "Board",
+    "subject": "Hindi",
+    "question": "'लड़का' शब्द का स्त्रीलिंग रूप है:",
+    "options": ["लड़की", "लड़के", "लड़कों", "बालक"],
+    "correctAnswer": "लड़की"
+  },
+  {
+    "id": "board-english-9",
+    "exam": "Board",
+    "subject": "English",
+    "question": "Choose the correct spelling:",
+    "options": ["Enviroment", "Environment", "Envirnoment", "Enviornment"],
+    "correctAnswer": "Environment"
+  },
+  {
+    "id": "board-english-10",
+    "exam": "Board",
+    "subject": "English",
+    "question": "Choose the correct passive voice: The teacher praised the student.",
+    "options": ["The student praised the teacher.", "The student was praised by the teacher.", "The student is praised by the teacher.", "The teacher was praised by the student."],
+    "correctAnswer": "The student was praised by the teacher."
+  },
+  {
+    "id": "jee-physics-15",
+    "exam": "JEE",
+    "subject": "Physics",
+    "question": "The unit of impulse is:",
+    "options": ["N s", "N/m", "J/s", "kg/m"],
+    "correctAnswer": "N s"
+  },
+  {
+    "id": "jee-physics-16",
+    "exam": "JEE",
+    "subject": "Physics",
+    "question": "The angular momentum of a particle is the cross product of position and:",
+    "options": ["Force", "Momentum", "Acceleration", "Energy"],
+    "correctAnswer": "Momentum"
+  },
+  {
+    "id": "jee-physics-17",
+    "exam": "JEE",
+    "subject": "Physics",
+    "question": "The time period of a simple pendulum depends on its length and:",
+    "options": ["Mass of bob", "Acceleration due to gravity", "Amplitude only", "Density of bob"],
+    "correctAnswer": "Acceleration due to gravity"
+  },
+  {
+    "id": "jee-physics-18",
+    "exam": "JEE",
+    "subject": "Physics",
+    "question": "The electric field inside a conductor in electrostatic equilibrium is:",
+    "options": ["Zero", "Constant non-zero", "Infinite", "Dependent on mass"],
+    "correctAnswer": "Zero"
+  },
+  {
+    "id": "jee-physics-19",
+    "exam": "JEE",
+    "subject": "Physics",
+    "question": "The SI unit of magnetic flux is:",
+    "options": ["Tesla", "Weber", "Henry", "Gauss"],
+    "correctAnswer": "Weber"
+  },
+  {
+    "id": "jee-physics-20",
+    "exam": "JEE",
+    "subject": "Physics",
+    "question": "In an isolated system, which quantity is always conserved during a collision?",
+    "options": ["Momentum", "Kinetic energy always", "Speed of every body", "Potential energy"],
+    "correctAnswer": "Momentum"
+  },
+  {
+    "id": "jee-chemistry-15",
+    "exam": "JEE",
+    "subject": "Chemistry",
+    "question": "The pH of a 0.001 M strong hydrochloric acid solution is approximately:",
+    "options": ["1", "3", "7", "11"],
+    "correctAnswer": "3"
+  },
+  {
+    "id": "jee-chemistry-16",
+    "exam": "JEE",
+    "subject": "Chemistry",
+    "question": "The IUPAC name of CH3CH2OH is:",
+    "options": ["Methanol", "Ethanol", "Propanol", "Ethanal"],
+    "correctAnswer": "Ethanol"
+  },
+  {
+    "id": "jee-chemistry-17",
+    "exam": "JEE",
+    "subject": "Chemistry",
+    "question": "The number of molecules in one mole of any substance is called:",
+    "options": ["Faraday constant", "Avogadro constant", "Gas constant", "Planck constant"],
+    "correctAnswer": "Avogadro constant"
+  },
+  {
+    "id": "jee-chemistry-18",
+    "exam": "JEE",
+    "subject": "Chemistry",
+    "question": "Which orbitals have a dumbbell shape?",
+    "options": ["s", "p", "d", "f"],
+    "correctAnswer": "p"
+  },
+  {
+    "id": "jee-chemistry-19",
+    "exam": "JEE",
+    "subject": "Chemistry",
+    "question": "The process of conversion of a solid directly into vapour is:",
+    "options": ["Fusion", "Sublimation", "Condensation", "Evaporation"],
+    "correctAnswer": "Sublimation"
+  },
+  {
+    "id": "jee-chemistry-20",
+    "exam": "JEE",
+    "subject": "Chemistry",
+    "question": "The strongest intermolecular force among these is generally:",
+    "options": ["London force", "Dipole force", "Hydrogen bond", "Induced dipole force"],
+    "correctAnswer": "Hydrogen bond"
+  },
+  {
+    "id": "jee-maths-15",
+    "exam": "JEE",
+    "subject": "Mathematics",
+    "question": "The value of the determinant of the identity matrix of order 2 is:",
+    "options": ["0", "1", "2", "-1"],
+    "correctAnswer": "1"
+  },
+  {
+    "id": "jee-maths-16",
+    "exam": "JEE",
+    "subject": "Mathematics",
+    "question": "The domain of f(x) = 1/(x - 2) excludes:",
+    "options": ["x = 0", "x = 1", "x = 2", "x = -2"],
+    "correctAnswer": "x = 2"
+  },
+  {
+    "id": "jee-maths-17",
+    "exam": "JEE",
+    "subject": "Mathematics",
+    "question": "The common difference of the AP 3, 7, 11, 15 is:",
+    "options": ["2", "3", "4", "5"],
+    "correctAnswer": "4"
+  },
+  {
+    "id": "jee-maths-18",
+    "exam": "JEE",
+    "subject": "Mathematics",
+    "question": "The probability of an impossible event is:",
+    "options": ["0", "1/2", "1", "-1"],
+    "correctAnswer": "0"
+  },
+  {
+    "id": "jee-maths-19",
+    "exam": "JEE",
+    "subject": "Mathematics",
+    "question": "The solution of 2x + 5 = 11 is:",
+    "options": ["2", "3", "4", "8"],
+    "correctAnswer": "3"
+  },
+  {
+    "id": "jee-maths-20",
+    "exam": "JEE",
+    "subject": "Mathematics",
+    "question": "The value of cos 0 degrees is:",
+    "options": ["0", "1/2", "1", "-1"],
+    "correctAnswer": "1"
+  },
+  {
+    "id": "neet-physics-15",
+    "exam": "NEET",
+    "subject": "Physics",
+    "question": "The resistance of an ideal voltmeter is:",
+    "options": ["Zero", "Very high", "1 ohm", "Equal to ammeter resistance"],
+    "correctAnswer": "Very high"
+  },
+  {
+    "id": "neet-physics-16",
+    "exam": "NEET",
+    "subject": "Physics",
+    "question": "A force perpendicular to displacement does what work?",
+    "options": ["Maximum positive", "Zero", "Maximum negative", "Infinite"],
+    "correctAnswer": "Zero"
+  },
+  {
+    "id": "neet-physics-17",
+    "exam": "NEET",
+    "subject": "Physics",
+    "question": "The speed of light is maximum in:",
+    "options": ["Glass", "Water", "Vacuum", "Diamond"],
+    "correctAnswer": "Vacuum"
+  },
+  {
+    "id": "neet-physics-18",
+    "exam": "NEET",
+    "subject": "Physics",
+    "question": "The phenomenon responsible for the blue colour of the sky is:",
+    "options": ["Reflection", "Refraction", "Scattering", "Interference"],
+    "correctAnswer": "Scattering"
+  },
+  {
+    "id": "neet-physics-19",
+    "exam": "NEET",
+    "subject": "Physics",
+    "question": "The momentum of a photon is related to its wavelength by:",
+    "options": ["p = h/lambda", "p = h lambda", "p = lambda/h", "p = 0"],
+    "correctAnswer": "p = h/lambda"
+  },
+  {
+    "id": "neet-physics-20",
+    "exam": "NEET",
+    "subject": "Physics",
+    "question": "The device used to convert AC into DC is:",
+    "options": ["Transformer", "Rectifier", "Oscillator", "Galvanometer"],
+    "correctAnswer": "Rectifier"
+  },
+  {
+    "id": "neet-chemistry-15",
+    "exam": "NEET",
+    "subject": "Chemistry",
+    "question": "The main component of natural gas is:",
+    "options": ["Methane", "Ethane", "Propane", "Butane"],
+    "correctAnswer": "Methane"
+  },
+  {
+    "id": "neet-chemistry-16",
+    "exam": "NEET",
+    "subject": "Chemistry",
+    "question": "A catalyst changes the rate of reaction by changing the:",
+    "options": ["Equilibrium constant", "Activation energy", "Heat of reaction", "Final products"],
+    "correctAnswer": "Activation energy"
+  },
+  {
+    "id": "neet-chemistry-17",
+    "exam": "NEET",
+    "subject": "Chemistry",
+    "question": "The element essential for formation of haemoglobin is:",
+    "options": ["Calcium", "Iron", "Sodium", "Iodine"],
+    "correctAnswer": "Iron"
+  },
+  {
+    "id": "neet-chemistry-18",
+    "exam": "NEET",
+    "subject": "Chemistry",
+    "question": "The functional group of aldehydes is:",
+    "options": ["-OH", "-COOH", "-CHO", "-NH2"],
+    "correctAnswer": "-CHO"
+  },
+  {
+    "id": "neet-chemistry-19",
+    "exam": "NEET",
+    "subject": "Chemistry",
+    "question": "The gas evolved when an acid reacts with a carbonate is:",
+    "options": ["Oxygen", "Hydrogen", "Carbon dioxide", "Nitrogen"],
+    "correctAnswer": "Carbon dioxide"
+  },
+  {
+    "id": "neet-chemistry-20",
+    "exam": "NEET",
+    "subject": "Chemistry",
+    "question": "The oxidation number of sodium in NaCl is:",
+    "options": ["-1", "0", "+1", "+2"],
+    "correctAnswer": "+1"
+  },
+  {
+    "id": "neet-biology-15",
+    "exam": "NEET",
+    "subject": "Biology",
+    "question": "The pigment that absorbs light energy during photosynthesis is:",
+    "options": ["Chlorophyll", "Haemoglobin", "Keratin", "Insulin"],
+    "correctAnswer": "Chlorophyll"
+  },
+  {
+    "id": "neet-biology-16",
+    "exam": "NEET",
+    "subject": "Biology",
+    "question": "The exchange of gases in human lungs occurs in the:",
+    "options": ["Bronchi", "Alveoli", "Trachea", "Larynx"],
+    "correctAnswer": "Alveoli"
+  },
+  {
+    "id": "neet-biology-17",
+    "exam": "NEET",
+    "subject": "Biology",
+    "question": "The genetic material in most organisms is:",
+    "options": ["Protein", "DNA", "Lipid", "Starch"],
+    "correctAnswer": "DNA"
+  },
+  {
+    "id": "neet-biology-18",
+    "exam": "NEET",
+    "subject": "Biology",
+    "question": "The largest gland in the human body is:",
+    "options": ["Pancreas", "Liver", "Thyroid", "Pituitary"],
+    "correctAnswer": "Liver"
+  },
+  {
+    "id": "neet-biology-19",
+    "exam": "NEET",
+    "subject": "Biology",
+    "question": "The process by which a seed begins to grow is called:",
+    "options": ["Germination", "Pollination", "Fertilisation", "Transpiration"],
+    "correctAnswer": "Germination"
+  },
+  {
+    "id": "neet-biology-20",
+    "exam": "NEET",
+    "subject": "Biology",
+    "question": "The vitamin produced in skin in sunlight is:",
+    "options": ["Vitamin A", "Vitamin B12", "Vitamin C", "Vitamin D"],
+    "correctAnswer": "Vitamin D"
+  },
+  {
+    "id": "board-physics-15",
+    "exam": "Board",
+    "subject": "Physics",
+    "question": "The SI unit of electric charge is:",
+    "options": ["Coulomb", "Volt", "Ohm", "Ampere"],
+    "correctAnswer": "Coulomb"
+  },
+  {
+    "id": "board-physics-16",
+    "exam": "Board",
+    "subject": "Physics",
+    "question": "The image formed by a plane mirror is:",
+    "options": ["Real and inverted", "Virtual and erect", "Real and erect", "Virtual and inverted"],
+    "correctAnswer": "Virtual and erect"
+  },
+  {
+    "id": "board-physics-17",
+    "exam": "Board",
+    "subject": "Physics",
+    "question": "The rate of change of velocity is called:",
+    "options": ["Speed", "Acceleration", "Momentum", "Impulse"],
+    "correctAnswer": "Acceleration"
+  },
+  {
+    "id": "board-physics-18",
+    "exam": "Board",
+    "subject": "Physics",
+    "question": "The frequency of a sound determines its:",
+    "options": ["Loudness", "Pitch", "Quality only", "Amplitude"],
+    "correctAnswer": "Pitch"
+  },
+  {
+    "id": "board-physics-19",
+    "exam": "Board",
+    "subject": "Physics",
+    "question": "The commercial unit of electrical energy is:",
+    "options": ["Watt", "Kilowatt-hour", "Volt", "Ampere-hour only"],
+    "correctAnswer": "Kilowatt-hour"
+  },
+  {
+    "id": "board-physics-20",
+    "exam": "Board",
+    "subject": "Physics",
+    "question": "The focal length of a plane mirror is:",
+    "options": ["Zero", "One metre", "Infinite", "Negative one metre"],
+    "correctAnswer": "Infinite"
+  },
+  {
+    "id": "board-chemistry-15",
+    "exam": "Board",
+    "subject": "Chemistry",
+    "question": "The smallest particle of an element that takes part in a chemical reaction is an:",
+    "options": ["Atom", "Ion only", "Molecule only", "Electron"],
+    "correctAnswer": "Atom"
+  },
+  {
+    "id": "board-chemistry-16",
+    "exam": "Board",
+    "subject": "Chemistry",
+    "question": "The reaction between an acid and a base is called:",
+    "options": ["Oxidation", "Neutralisation", "Reduction", "Displacement"],
+    "correctAnswer": "Neutralisation"
+  },
+  {
+    "id": "board-chemistry-17",
+    "exam": "Board",
+    "subject": "Chemistry",
+    "question": "The metal liquid at room temperature is:",
+    "options": ["Iron", "Mercury", "Copper", "Aluminium"],
+    "correctAnswer": "Mercury"
+  },
+  {
+    "id": "board-chemistry-18",
+    "exam": "Board",
+    "subject": "Chemistry",
+    "question": "The formula of ammonia is:",
+    "options": ["NH3", "NO2", "N2O", "NH4"],
+    "correctAnswer": "NH3"
+  },
+  {
+    "id": "board-chemistry-19",
+    "exam": "Board",
+    "subject": "Chemistry",
+    "question": "A substance that turns blue litmus red is generally:",
+    "options": ["A base", "An acid", "A salt only", "A metal"],
+    "correctAnswer": "An acid"
+  },
+  {
+    "id": "board-chemistry-20",
+    "exam": "Board",
+    "subject": "Chemistry",
+    "question": "The process of separating coloured components of ink is:",
+    "options": ["Filtration", "Chromatography", "Sublimation", "Decantation"],
+    "correctAnswer": "Chromatography"
+  },
+  {
+    "id": "board-maths-15",
+    "exam": "Board",
+    "subject": "Mathematics",
+    "question": "The square root of 144 is:",
+    "options": ["10", "11", "12", "14"],
+    "correctAnswer": "12"
+  },
+  {
+    "id": "board-maths-16",
+    "exam": "Board",
+    "subject": "Mathematics",
+    "question": "The zero of the polynomial x - 7 is:",
+    "options": ["0", "1", "7", "-7"],
+    "correctAnswer": "7"
+  },
+  {
+    "id": "board-maths-17",
+    "exam": "Board",
+    "subject": "Mathematics",
+    "question": "The circumference of a circle of radius r is:",
+    "options": ["pi r^2", "2 pi r", "pi d^2", "r^2"],
+    "correctAnswer": "2 pi r"
+  },
+  {
+    "id": "board-maths-18",
+    "exam": "Board",
+    "subject": "Mathematics",
+    "question": "The coordinates of the origin are:",
+    "options": ["(1, 0)", "(0, 1)", "(0, 0)", "(-1, 0)"],
+    "correctAnswer": "(0, 0)"
+  },
+  {
+    "id": "board-maths-19",
+    "exam": "Board",
+    "subject": "Mathematics",
+    "question": "The median of 2, 4, 6, 8, 10 is:",
+    "options": ["4", "5", "6", "8"],
+    "correctAnswer": "6"
+  },
+  {
+    "id": "board-maths-20",
+    "exam": "Board",
+    "subject": "Mathematics",
+    "question": "A triangle with all three sides equal is called:",
+    "options": ["Scalene", "Isosceles", "Equilateral", "Right-angled"],
+    "correctAnswer": "Equilateral"
+  },
+  {
+    "id": "board-biology-15",
+    "exam": "Board",
+    "subject": "Biology",
+    "question": "The organ that filters blood and forms urine is the:",
+    "options": ["Heart", "Kidney", "Lung", "Stomach"],
+    "correctAnswer": "Kidney"
+  },
+  {
+    "id": "board-biology-16",
+    "exam": "Board",
+    "subject": "Biology",
+    "question": "The green plants prepare food by the process of:",
+    "options": ["Respiration", "Photosynthesis", "Excretion", "Fermentation"],
+    "correctAnswer": "Photosynthesis"
+  },
+  {
+    "id": "board-biology-17",
+    "exam": "Board",
+    "subject": "Biology",
+    "question": "The human heart has how many chambers?",
+    "options": ["2", "3", "4", "5"],
+    "correctAnswer": "4"
+  },
+  {
+    "id": "board-biology-18",
+    "exam": "Board",
+    "subject": "Biology",
+    "question": "The deficiency of vitamin C causes:",
+    "options": ["Rickets", "Scurvy", "Night blindness", "Beriberi"],
+    "correctAnswer": "Scurvy"
+  },
+  {
+    "id": "board-biology-19",
+    "exam": "Board",
+    "subject": "Biology",
+    "question": "The respiratory pigment in human blood is:",
+    "options": ["Chlorophyll", "Haemoglobin", "Melanin", "Insulin"],
+    "correctAnswer": "Haemoglobin"
+  },
+  {
+    "id": "board-biology-20",
+    "exam": "Board",
+    "subject": "Biology",
+    "question": "The part of a flower that receives pollen is the:",
+    "options": ["Anther", "Stigma", "Filament", "Sepal"],
+    "correctAnswer": "Stigma"
+  },
+  {
+    "id": "board-hindi-11",
+    "exam": "Board",
+    "subject": "Hindi",
+    "question": "'सूर्य' का पर्यायवाची शब्द है:",
+    "options": ["रवि", "रात्रि", "मेघ", "धरती"],
+    "correctAnswer": "रवि"
+  },
+  {
+    "id": "board-hindi-12",
+    "exam": "Board",
+    "subject": "Hindi",
+    "question": "'लाभ' का विलोम शब्द है:",
+    "options": ["हानि", "जीत", "यश", "उन्नति"],
+    "correctAnswer": "हानि"
+  },
+  {
+    "id": "board-hindi-13",
+    "exam": "Board",
+    "subject": "Hindi",
+    "question": "'राम ने पत्र लिखा' वाक्य में कर्ता है:",
+    "options": ["राम", "पत्र", "लिखा", "ने"],
+    "correctAnswer": "राम"
+  },
+  {
+    "id": "board-hindi-14",
+    "exam": "Board",
+    "subject": "Hindi",
+    "question": "'नाक कटना' मुहावरे का अर्थ है:",
+    "options": ["अपमान होना", "बीमार होना", "तेज दौड़ना", "बहुत खुश होना"],
+    "correctAnswer": "अपमान होना"
+  },
+  {
+    "id": "board-hindi-15",
+    "exam": "Board",
+    "subject": "Hindi",
+    "question": "'पुस्तक' शब्द का लिंग है:",
+    "options": ["पुल्लिंग", "स्त्रीलिंग", "नपुंसकलिंग", "उभयलिंग"],
+    "correctAnswer": "स्त्रीलिंग"
+  },
+  {
+    "id": "board-hindi-16",
+    "exam": "Board",
+    "subject": "Hindi",
+    "question": "'धीरे-धीरे' में कौन-सा अव्यय है:",
+    "options": ["क्रियाविशेषण", "संबंधबोधक", "समुच्चयबोधक", "विस्मयादिबोधक"],
+    "correctAnswer": "क्रियाविशेषण"
+  },
+  {
+    "id": "board-hindi-17",
+    "exam": "Board",
+    "subject": "Hindi",
+    "question": "'गंगा' शब्द किस संज्ञा का उदाहरण है:",
+    "options": ["जातिवाचक", "व्यक्तिवाचक", "भाववाचक", "समूहवाचक"],
+    "correctAnswer": "व्यक्तिवाचक"
+  },
+  {
+    "id": "board-hindi-18",
+    "exam": "Board",
+    "subject": "Hindi",
+    "question": "'अनुशासन' शब्द में उपसर्ग है:",
+    "options": ["अनु", "शास", "शन", "अनुश"],
+    "correctAnswer": "अनु"
+  },
+  {
+    "id": "board-hindi-19",
+    "exam": "Board",
+    "subject": "Hindi",
+    "question": "'जो पढ़ता है, वह सफल होता है' वाक्य है:",
+    "options": ["सरल", "संयुक्त", "मिश्र", "प्रश्नवाचक"],
+    "correctAnswer": "मिश्र"
+  },
+  {
+    "id": "board-hindi-20",
+    "exam": "Board",
+    "subject": "Hindi",
+    "question": "'आकाश' का पर्यायवाची है:",
+    "options": ["नभ", "जल", "अनल", "पवन"],
+    "correctAnswer": "नभ"
+  },
+  {
+    "id": "board-english-11",
+    "exam": "Board",
+    "subject": "English",
+    "question": "Choose the antonym of 'ancient':",
+    "options": ["Old", "Modern", "Historic", "Past"],
+    "correctAnswer": "Modern"
+  },
+  {
+    "id": "board-english-12",
+    "exam": "Board",
+    "subject": "English",
+    "question": "Choose the correct preposition: She is good ___ mathematics.",
+    "options": ["in", "at", "on", "for"],
+    "correctAnswer": "at"
+  },
+  {
+    "id": "board-english-13",
+    "exam": "Board",
+    "subject": "English",
+    "question": "The plural of 'mouse' is:",
+    "options": ["Mouses", "Mouse", "Mice", "Meese"],
+    "correctAnswer": "Mice"
+  },
+  {
+    "id": "board-english-14",
+    "exam": "Board",
+    "subject": "English",
+    "question": "Choose the noun in the sentence: The child reads a book.",
+    "options": ["The", "Child", "Reads", "A"],
+    "correctAnswer": "Child"
+  },
+  {
+    "id": "board-english-15",
+    "exam": "Board",
+    "subject": "English",
+    "question": "Choose the correct tense: They ___ football every evening.",
+    "options": ["plays", "played", "play", "playing"],
+    "correctAnswer": "play"
+  },
+  {
+    "id": "board-english-16",
+    "exam": "Board",
+    "subject": "English",
+    "question": "A person who writes poems is called a:",
+    "options": ["Poet", "Painter", "Singer", "Editor"],
+    "correctAnswer": "Poet"
+  },
+  {
+    "id": "board-english-17",
+    "exam": "Board",
+    "subject": "English",
+    "question": "Choose the correct question tag: You are ready, ___?",
+    "options": ["are you", "aren't you", "isn't it", "don't you"],
+    "correctAnswer": "aren't you"
+  },
+  {
+    "id": "board-english-18",
+    "exam": "Board",
+    "subject": "English",
+    "question": "The comparative form of 'good' is:",
+    "options": ["Gooder", "More good", "Better", "Best"],
+    "correctAnswer": "Better"
+  },
+  {
+    "id": "board-english-19",
+    "exam": "Board",
+    "subject": "English",
+    "question": "Choose the correctly punctuated sentence:",
+    "options": ["What a beautiful day!", "What a beautiful day.", "what a beautiful day!", "What, a beautiful day"],
+    "correctAnswer": "What a beautiful day!"
+  },
+  {
+    "id": "board-english-20",
+    "exam": "Board",
+    "subject": "English",
+    "question": "Choose the correct conjunction: Work hard ___ you will succeed.",
+    "options": ["and", "but", "or", "because"],
+    "correctAnswer": "and"
   }
 ]
