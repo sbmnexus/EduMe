@@ -20,6 +20,7 @@ const STORAGE_KEYS = {
 const defaultProfile = {
   name: '',
   targetExam: '',
+  customExamName: '',
   examDate: '',
   className: '',
   weakSubjects: '',
@@ -54,7 +55,6 @@ const quizExamKeys = {
   'JEE MAINS & ADVANCE': 'JEE',
   NEET: 'NEET',
   BOARDS: 'Board',
-  CA: 'Board',
 };
 
 const QUIZ_COMPLETION_XP = 10;
@@ -435,7 +435,7 @@ function getInitialSettings() {
 }
 
 function getInitialProfile() {
-  const storedProfile = readStorage(STORAGE_KEYS.profile, defaultProfile);
+  const storedProfile = { ...defaultProfile, ...readStorage(STORAGE_KEYS.profile, defaultProfile) };
   // Migrate old exam names to new ones
   if (storedProfile.targetExam === 'JEE') {
     storedProfile.targetExam = 'JEE MAINS & ADVANCE';
@@ -456,7 +456,8 @@ function App() {
   const [settings, setSettings] = useState(getInitialSettings);
   const [theme, setTheme] = useState(() => {
     const storedTheme = readStorage(STORAGE_KEYS.theme, 'system');
-    return storedTheme === 'aurora' || storedTheme === 'solstice' ? 'system' : storedTheme;
+    if (storedTheme === 'aurora' || storedTheme === 'solstice') return 'system';
+    return storedTheme === 'autumn' ? 'oak' : storedTheme;
   });
   const [xp, setXp] = useState(() => Number(readStorage(STORAGE_KEYS.xp, 0)) || 0);
   const [quizHistory, setQuizHistory] = useState(() => readStorage(STORAGE_KEYS.quizHistory, []));
@@ -560,10 +561,10 @@ function App() {
   useEffect(() => {
     if (theme === 'system') {
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      document.body.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+      document.body.setAttribute('data-theme', prefersDark ? 'dark' : 'system-light');
       return;
     }
-    document.body.setAttribute('data-theme', theme);
+    document.body.setAttribute('data-theme', theme === 'oak' ? 'autumn' : theme);
   }, [theme]);
 
   useEffect(() => {
@@ -735,7 +736,7 @@ function App() {
     const media = window.matchMedia('(prefers-color-scheme: dark)');
     const listener = () => {
       if (theme === 'system') {
-        document.body.setAttribute('data-theme', media.matches ? 'dark' : 'light');
+        document.body.setAttribute('data-theme', media.matches ? 'dark' : 'system-light');
       }
     };
     media.addEventListener('change', listener);
@@ -1034,6 +1035,13 @@ function App() {
       triggerToast('Please enter your name.');
       return;
     }
+    if (profile.targetExam === 'OTHER' && !profile.customExamName?.trim()) {
+      triggerToast('Please enter your exam name.');
+      return;
+    }
+    if (profile.targetExam === 'OTHER') {
+      setProfile((current) => ({ ...current, targetExam: current.customExamName.trim(), customExamName: '' }));
+    }
     triggerToast('✓ Profile Updated');
     setPage('home');
   };
@@ -1105,7 +1113,7 @@ function App() {
       setGoals(Array.isArray(data.goals) ? data.goals : []);
       setSessions(Array.isArray(data.sessions) ? data.sessions : []);
       setSettings(nextSettings);
-      const importedTheme = data.theme === 'aurora' || data.theme === 'solstice' ? 'system' : (data.theme || 'system');
+      const importedTheme = data.theme === 'aurora' || data.theme === 'solstice' ? 'system' : data.theme === 'autumn' ? 'oak' : (data.theme || 'system');
       setTheme(importedTheme);
       setQuizHistory(Array.isArray(data.quizHistory) ? data.quizHistory : []);
       setXp(Number(data.xp || 0));
@@ -1133,6 +1141,10 @@ function App() {
     }
     if (!quizExam || !quizSubject) {
       triggerToast('Select an exam and subject first.');
+      return;
+    }
+    if (!quizExamKeys[quizExam]) {
+      triggerToast('Quiz coming soon for this exam.');
       return;
     }
     const questionExam = quizExamKeys[quizExam];
@@ -1539,10 +1551,16 @@ function App() {
           </div>
           <div>
             <label className="muted" style={{ display: 'block', marginBottom: 8 }}>Target Exam</label>
-            <select className="select" value={profile.targetExam} onChange={(e) => setProfile((current) => ({ ...current, targetExam: e.target.value }))}>
+            <select className="select" value={profile.targetExam} onChange={(e) => setProfile((current) => ({ ...current, targetExam: e.target.value, customExamName: e.target.value === 'OTHER' ? current.customExamName : '' }))}>
               <option value="" disabled>Select Your Exam</option><option>JEE MAINS & ADVANCE</option><option>NEET</option><option>BOARDS</option><option>UPSC</option><option>NDA</option><option>SSC</option><option>CUET</option><option>CA</option><option>OTHER</option>
             </select>
           </div>
+          {profile.targetExam === 'OTHER' && (
+            <div>
+              <label className="muted" style={{ display: 'block', marginBottom: 8 }}>Your Exam Name</label>
+              <input className="input" value={profile.customExamName} onChange={(e) => setProfile((current) => ({ ...current, customExamName: e.target.value }))} placeholder="Enter your exam name" />
+            </div>
+          )}
           <div>
             <label className="muted" style={{ display: 'block', marginBottom: 8 }}>Exam Date</label>
             <input className="input" type="date" value={profile.examDate} onChange={(e) => setProfile((current) => ({ ...current, examDate: e.target.value }))} aria-label="Select Your Exam Date" />
@@ -1609,13 +1627,13 @@ function App() {
           <div className="card" style={{ padding: 16 }}>
             <h3>Theme</h3>
             <div className="nav-row">
-              {['light', 'dark', 'system'].map((option) => (
+              {['light', 'dark', 'oak', 'system'].map((option) => (
                 <button
                   key={option}
                   className={theme === option ? 'primary-btn' : 'ghost-btn'}
                   onClick={() => setTheme(option)}
                 >
-                  {option === 'light' ? 'Light' : option === 'dark' ? 'Dark' : 'System Default'}
+                  {option === 'light' ? 'Light' : option === 'dark' ? 'Dark' : option === 'oak' ? 'Oak' : 'System Default'}
                 </button>
               ))}
             </div>
@@ -1673,6 +1691,11 @@ function App() {
                   <option value="NEET">NEET</option>
                   <option value="BOARDS">BOARDS</option>
                   <option value="CA">CA</option>
+                  <option value="UPSC">UPSC</option>
+                  <option value="NDA">NDA</option>
+                  <option value="SSC">SSC</option>
+                  <option value="CUET">CUET</option>
+                  {profile.targetExam && !quizExamKeys[profile.targetExam] && !['UPSC', 'NDA', 'SSC', 'CUET'].includes(profile.targetExam) && <option value={profile.targetExam}>{profile.targetExam}</option>}
                 </select>
               </div>
               <div>
@@ -1682,6 +1705,12 @@ function App() {
                   {(examSubjects[quizExam] || []).map((subject) => <option key={subject} value={subject}>{subject}</option>)}
                 </select>
               </div>
+              {quizExam && !quizExamKeys[quizExam] && (
+                <div className="quiz-coming-soon" role="status">
+                  <strong>Quiz coming soon for {quizExam}.</strong>
+                  <span>We&apos;re preparing quality practice questions for this exam. You can continue planning and tracking your study meanwhile.</span>
+                </div>
+              )}
               <button className="primary-btn" onClick={startQuiz}>Start Quiz</button>
             </div>
           </div>
@@ -1868,8 +1897,19 @@ function App() {
     );
   };
 
-  const downloadReport = (period) => {
+  const downloadReport = async (period) => {
     try {
+      let logoSrc = '/icon-192.png';
+      try {
+        const logoResponse = await fetch('/icon-192.png');
+        const logoBlob = await logoResponse.blob();
+        const logoBytes = new Uint8Array(await logoBlob.arrayBuffer());
+        let binary = '';
+        logoBytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+        logoSrc = `data:${logoBlob.type || 'image/png'};base64,${btoa(binary)}`;
+      } catch {
+        // Keep the path fallback if the logo cannot be loaded.
+      }
       const now = new Date();
       const periodStart = new Date(now);
       const periodEnd = new Date(now);
@@ -1926,6 +1966,7 @@ function App() {
               .card { background:rgba(255,255,255,.78); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,.92); border-radius:24px; padding:24px; box-shadow:0 18px 42px rgba(71,53,145,.14); margin-bottom:20px; }
               .header { display:flex; align-items:center; justify-content:space-between; }
               .brand { display:flex; align-items:center; gap:12px; font-size:24px; font-weight:800; color:#4c1d95; }
+              .brand img { width:38px; height:38px; border-radius:10px; object-fit:cover; box-shadow:0 6px 14px rgba(76,29,149,.18); }
               .badge { background:linear-gradient(135deg,#7c3aed,#db2777); color:#fff; display:inline-block; padding:8px 12px; border-radius:999px; box-shadow:0 8px 18px rgba(124,58,237,.2); }
               .grid { display:grid; grid-template-columns: repeat(2, minmax(180px, 1fr)); gap:14px; }
               .badge-grid { display:flex; flex-wrap:wrap; align-items:stretch; gap:10px; }
@@ -1949,7 +1990,7 @@ function App() {
           <body>
             <div class="card">
               <div class="header">
-                <div class="brand">EDUME</div>
+                <div class="brand"><img src="${logoSrc}" alt="EduMe logo"> <span>EDUME</span></div>
                 <div class="badge">${period === 'weekly' ? 'Weekly' : 'Monthly'} Report</div>
               </div>
               <p><strong>Student:</strong> ${reportData.name}</p>
@@ -1971,8 +2012,8 @@ function App() {
             <div class="card">
               <h2>Quiz Performance</h2>
               <div class="grid">
-                <div class="stat"><strong>Quiz Attempts</strong><div>${reportData.quizUnavailable ? 'Quiz is currently unavailable for this exam.' : reportData.quizAttempts}</div></div>
-                <div class="stat"><strong>Accuracy</strong><div>${reportData.quizUnavailable ? 'Quiz is currently unavailable for this exam.' : `${reportData.quizAccuracy}%`}</div></div>
+                <div class="stat"><strong>Quiz Attempts</strong><div>${reportData.quizUnavailable ? `Quiz coming soon for ${reportData.targetExam}.` : reportData.quizAttempts}</div></div>
+                <div class="stat"><strong>Accuracy</strong><div>${reportData.quizUnavailable ? `Quiz coming soon for ${reportData.targetExam}.` : `${reportData.quizAccuracy}%`}</div></div>
                 <div class="stat"><strong>XP Earned in Period</strong><div>${reportData.xp}</div></div>
                 <div class="stat"><strong>Current Level</strong><div>${reportData.level}</div></div>
               </div>
@@ -2347,11 +2388,11 @@ function App() {
               </button>
               <button
                 className="icon-btn theme-toggle"
-                onClick={() => setTheme((current) => current === 'dark' ? 'light' : current === 'light' ? 'system' : 'dark')}
+                onClick={() => setTheme((current) => current === 'dark' ? 'oak' : current === 'oak' ? 'light' : current === 'light' ? 'system' : 'dark')}
                 aria-label={`Theme: ${theme}. Change theme`}
                 title={`Theme: ${theme}`}
               >
-                {theme === 'dark' ? '🌙' : '☀️'}
+                {theme === 'dark' ? '🌙' : theme === 'oak' ? '🌳' : '☀️'}
               </button>
             </div>
           </header>

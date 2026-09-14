@@ -827,6 +827,18 @@ body[data-theme='dark'], body[data-theme='dark'] .topbar, body[data-theme='dark'
 }
 
 .card:hover { transform: translateY(-1px); box-shadow: 0 12px 28px rgba(15, 23, 42, 0.1); }
+.quiz-coming-soon {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid rgba(196, 122, 44, 0.28);
+  border-left: 4px solid var(--accent);
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(196, 122, 44, 0.1), rgba(142, 59, 47, 0.06));
+  color: var(--text-soft);
+}
+.quiz-coming-soon strong { color: var(--text); }
+.quiz-coming-soon span { line-height: 1.5; font-size: 0.92rem; }
 .primary-btn, .secondary-btn, .danger-btn, .ghost-btn { border-radius: 8px; box-shadow: none; }
 .primary-btn { background: #2563eb; }
 .secondary-btn { background: #e6f4f2; color: #0f766e; border-color: #b7ded8; }
@@ -1036,6 +1048,151 @@ body[data-theme='light'] .level-panel { background: #edf4fb; }
 body[data-theme='light'] .report-section-03 { background: #fff8e8; }
 body[data-theme='light'] .badges-panel { background: #f8f5e9; }
 body[data-theme='light'] .report-download-panel { background: #eaf7f5; }
+
+/* Oak theme: a warm editorial study desk with earthy premium surfaces. */
+body[data-theme='autumn'] {
+  --bg: #efe3d2;
+  --bg-soft: #e2cdb5;
+  --panel: rgba(255, 249, 239, 0.86);
+  --panel-strong: #fffaf2;
+  --card: linear-gradient(145deg, rgba(255, 250, 242, 0.96), rgba(246, 231, 211, 0.94));
+  --card-alt: #f5e6d2;
+  --text: #38251f;
+  --text-soft: #63483b;
+  --muted: #806b5a;
+  --primary: #8e3b2f;
+  --primary-soft: rgba(142, 59, 47, 0.12);
+  --secondary: #3f6b55;
+  --accent: #c47a2c;
+  --success: #547a52;
+  --warning: #c47a2c;
+  --danger: #a94442;
+  --border: rgba(137, 91, 61, 0.23);
+  --shadow: 0 18px 42px rgba(106, 66, 39, 0.14);
+  --toast-bg: rgba(56, 37, 31, 0.94);
+  --calendar-cell: rgba(255, 249, 239, 0.8);
+  --calendar-cell-hover: rgba(196, 122, 44, 0.12);
+  background:
+    radial-gradient(circle at 8% 12%, rgba(142, 59, 47, 0.16), transparent 22%),
+    radial-gradient(circle at 92% 18%, rgba(63, 107, 85, 0.16), transparent 24%),
+    linear-gradient(135deg, #e8d5bd 0%, #f5ecdf 48%, #d9c3aa 100%);
+  color: var(--text);
+}
+
+html:has(body[data-theme='autumn']) { background: #e2cdb5; }
+body[data-theme='autumn']::before,
+body[data-theme='autumn']::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+body[data-theme='autumn']::before {
+  opacity: 0.3;
+  background-image: radial-gradient(rgba(87, 54, 37, 0.16) 0.7px, transparent 0.7px);
+  background-size: 7px 7px;
+  mix-blend-mode: multiply;
+}
+body[data-theme='autumn']::after {
+  background: linear-gradient(115deg, transparent 0 42%, rgba(255, 255, 255, 0.22) 50%, transparent 58%);
+  opacity: 0.45;
+}
+body[data-theme='autumn'] .app-shell { position: relative; z-index: 1; }
+body[data-theme='autumn'] .topbar,
+body[data-theme='autumn'] .desktop-sidebar > .card,
+body[data-theme='autumn'] .mobile-nav {
+  background: rgba(255, 249, 239, 0.82);
+  border-color: rgba(137, 91, 61, 0.3);
+  box-shadow: 0 18px 38px rgba(106, 66, 39, 0.12);
+}
+body[data-theme='autumn'] .card,
+body[data-theme='autumn'] .task-summary-item,
+body[data-theme='autumn'] .progress-stat {
+  border-color: rgba(137, 91, 61, 0.22);
+  box-shadow: var(--shadow);
+}
+body[data-theme='autumn'] .card:hover { border-color: rgba(142, 59, 47, 0.38); box-shadow: 0 24px 48px rgba(106, 66, 39, 0.2); }
+body[data-theme='autumn'] .primary-btn {
+  background: linear-gradient(135deg, #8e3b2f, #b86532);
+  box-shadow: 0 12px 24px rgba(142, 59, 47, 0.2);
+}
+body[data-theme='autumn'] .secondary-btn {
+  background: rgba(63, 107, 85, 0.12);
+  color: #315b46;
+  border-color: rgba(63, 107, 85, 0.28);
+}
+body[data-theme='autumn'] .ghost-btn {
+  background: rgba(196, 122, 44, 0.1);
+  border-color: rgba(196, 122, 44, 0.24);
+}
+body[data-theme='autumn'] .home-panel-goal,
+body[data-theme='autumn'] .home-panel-tasks,
+body[data-theme='autumn'] .home-panel-reminders,
+body[data-theme='autumn'] .home-panel-goals,
+body[data-theme='autumn'] .home-panel-actions,
+body[data-theme='autumn'] .home-panel-activity,
+body[data-theme='autumn'] .home-focus-panel,
+body[data-theme='autumn'] .exam-countdown-panel,
+body[data-theme='autumn'] .focus-timer-card,
+body[data-theme='autumn'] .quiz-panel,
+body[data-theme='autumn'] .profile-panel,
+body[data-theme='autumn'] .quiz-history-panel,
+body[data-theme='autumn'] .quiz-question-panel,
+body[data-theme='autumn'] .quiz-result-panel,
+body[data-theme='autumn'] .planner-filters,
+body[data-theme='autumn'] .planner-calendar,
+body[data-theme='autumn'] .planner-tasks,
+body[data-theme='autumn'] .planner-goals,
+body[data-theme='autumn'] .report-download-panel,
+body[data-theme='autumn'] .badges-panel {
+  background: var(--card);
+  border-top-color: rgba(142, 59, 47, 0.42);
+}
+body[data-theme='autumn'] .progress-hero {
+  background: linear-gradient(120deg, #63352e, #8e3b2f 55%, #3f6b55);
+  box-shadow: 0 20px 42px rgba(99, 53, 46, 0.24);
+}
+body[data-theme='autumn'] .score-ring { background: conic-gradient(#d99a4d var(--score), rgba(255, 255, 255, 0.22) 0deg); }
+body[data-theme='autumn'] .input,
+body[data-theme='autumn'] .textarea,
+body[data-theme='autumn'] .select { background: rgba(255, 250, 242, 0.76); border-color: rgba(137, 91, 61, 0.28); color: var(--text); }
+body[data-theme='autumn'] .nav-btn.active,
+body[data-theme='autumn'] .nav-item.active { background: rgba(142, 59, 47, 0.12); color: var(--primary); }
+
+/* System Default stays adaptive while remaining distinct from the fixed Light theme. */
+body[data-theme='system-light'] {
+  --bg: #dce8ed;
+  --bg-soft: #cbdde4;
+  --panel: rgba(244, 249, 250, 0.92);
+  --panel-strong: #f9fcfc;
+  --card: linear-gradient(145deg, #f9fcfc, #eaf2f4);
+  --card-alt: #eef5f6;
+  --text: #20333b;
+  --text-soft: #3d5963;
+  --muted: #66808a;
+  --primary: #176b78;
+  --primary-soft: rgba(23, 107, 120, 0.12);
+  --secondary: #577b63;
+  --accent: #b17736;
+  --border: rgba(77, 119, 130, 0.25);
+  --shadow: 0 12px 28px rgba(47, 84, 94, 0.14);
+  background: linear-gradient(140deg, #d2e2e7, #f2f7f7 52%, #dfeae9);
+}
+html:has(body[data-theme='system-light']) { background: #d2e2e7; }
+body[data-theme='system-light'] .topbar,
+body[data-theme='system-light'] .desktop-sidebar > .card,
+body[data-theme='system-light'] .mobile-nav,
+body[data-theme='system-light'] .card,
+body[data-theme='system-light'] .task-summary-item,
+body[data-theme='system-light'] .progress-stat {
+  border-color: rgba(77, 119, 130, 0.24);
+  box-shadow: var(--shadow);
+}
+body[data-theme='system-light'] .primary-btn { background: linear-gradient(135deg, #176b78, #2c8b8d); }
+body[data-theme='system-light'] .secondary-btn { background: rgba(87, 123, 99, 0.12); color: #466d54; border-color: rgba(87, 123, 99, 0.28); }
+body[data-theme='system-light'] .ghost-btn { background: rgba(23, 107, 120, 0.08); border-color: rgba(23, 107, 120, 0.2); }
+
 
 body[data-theme='light'] {
   background: linear-gradient(145deg, #9eafbd 0%, #aebdca 52%, #bdcbd4 100%) !important;
