@@ -178,8 +178,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
   border: 1px solid var(--border); color: var(--text);
 }
 .mobile-menu-toggle { display: none; }
-.menu-glyph { display: grid; place-items: center; gap: 4px; width: 18px; }
-.menu-glyph i { display: block; height: 2px; border-radius: 2px; background: currentColor; transition: transform 0.2s ease, opacity 0.2s ease; }
+.menu-glyph { display: flex; flex-direction: column; justify-content: center; gap: 4px; width: 22px; height: 22px; }
+.menu-glyph span { display: block; width: 22px; height: 3px; border-radius: 3px; background: currentColor; }
+
 
 .primary-btn, .secondary-btn, .danger-btn, .ghost-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0.8rem 1rem; font-weight: 700;
@@ -519,15 +520,20 @@ textarea { min-height: 92px; resize: vertical; }
 .timer-controls button { flex: 1 1 125px; }
 
 .switch {
-  width: 54px; height: 32px; border-radius: 999px; background: rgba(148, 163, 184, 0.35); border: 1px solid var(--border); position: relative; transition: all 0.2s ease; padding: 0; overflow: hidden;
+  width: 64px; height: 34px; flex: 0 0 64px; display: flex; align-items: center; border-radius: 999px; background: #94a3b8; border: 1px solid rgba(100,116,139,0.35); position: relative; transition: background 0.2s ease, border-color 0.2s ease; padding: 0; overflow: hidden;
 }
 .switch.on {
-  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  background: #0f766e;
+  border-color: #0f766e;
 }
+.switch-label {
+  position: absolute; right: 8px; color: #fff; font-size: 9px; font-weight: 800; letter-spacing: 0; line-height: 1;
+}
+.switch.on .switch-label { left: 8px; right: auto; }
 .switch-thumb {
-  position: absolute; top: 3px; left: 4px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 4px 10px rgba(15, 23, 42, 0.18); transition: transform 0.2s ease;
+  position: absolute; top: 4px; left: 4px; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.25); transition: transform 0.2s ease;
 }
-.switch.on .switch-thumb { transform: translateX(22px); }
+.switch.on .switch-thumb { transform: translateX(30px); }
 
 .settings-card h3 {
   margin-top: 0;

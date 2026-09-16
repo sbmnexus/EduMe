@@ -49,13 +49,25 @@ const examSubjects = {
   NEET: ['Physics', 'Chemistry', 'Biology'],
   BOARDS: ['Physics', 'Chemistry', 'Mathematics', 'Biology', 'Hindi', 'English'],
   CA: ['Accounting', 'Law', 'Economics', 'Taxation'],
+  UPSC: ['History', 'Geography', 'Polity', 'Economics', 'General Science'],
+  NDA: ['Mathematics', 'English', 'General Science', 'History', 'Geography'],
+  SSC: ['Quantitative Aptitude', 'Reasoning', 'English', 'General Awareness'],
+  CUET: ['General Test', 'English', 'General Knowledge', 'Reasoning', 'Mathematics'],
 };
 
 const quizExamKeys = {
   'JEE MAINS & ADVANCE': 'JEE',
   NEET: 'NEET',
   BOARDS: 'Board',
+  CA: 'CA',
+  UPSC: 'UPSC',
+  NDA: 'NDA',
+  SSC: 'SSC',
+  CUET: 'CUET',
 };
+
+const SUPPORT_EMAIL = 'sbmplayerzofficial@gmail.com';
+const SUPPORT_GMAIL_URL = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(SUPPORT_EMAIL)}&su=${encodeURIComponent('EduMe Support Request')}&body=${encodeURIComponent('Hello EduMe Support,\n\n')}`;
 
 const QUIZ_COMPLETION_XP = 10;
 const QUIZ_CORRECT_ANSWER_XP = 5;
@@ -417,6 +429,7 @@ function getBadges({ xp, streak, quizHistory, completedTasksCount, sessionCount,
     { id: 'seven-day', name: '🔥 7 Day Streak', unlocked: streak >= 7 },
     { id: 'goal-crusher', name: '🎯 Goal Crusher', unlocked: completedTasksCount >= 10 },
     { id: 'quiz-master', name: '🏆 Quiz Master', unlocked: quizHistory.length >= 5 },
+    { id: 'exam-explorer', name: '🎓 Exam Explorer', unlocked: quizHistory.length >= 10 },
     { id: 'first-focus', name: '⏱️ First Focus', unlocked: sessionCount >= 1 },
     { id: 'goal-setter', name: '📌 Goal Setter', unlocked: goalCount >= 1 },
     { id: 'quiz-ace', name: '⭐ Quiz Ace', unlocked: quizHistory.some((result) => Number(result.accuracy || 0) >= 90) },
@@ -468,6 +481,8 @@ function App() {
   const [quizQuestions, setQuizQuestions] = useState([]);
   const [quizStarted, setQuizStarted] = useState(false);
   const [quizResult, setQuizResult] = useState(null);
+  const [quizHistoryDetail, setQuizHistoryDetail] = useState(null);
+  const [showAllQuizHistory, setShowAllQuizHistory] = useState(false);
   const [quizStep, setQuizStep] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [quizStartedAt, setQuizStartedAt] = useState(null);
@@ -593,7 +608,8 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!settings.notificationReminder || !('Notification' in window) || Notification.permission !== 'granted') return undefined;
+    const NotificationApi = typeof window !== 'undefined' ? window.Notification : undefined;
+    if (!settings.notificationReminder || !NotificationApi || NotificationApi.permission !== 'granted') return undefined;
 
     const sendReminder = () => {
       const today = getCurrentDateKey();
@@ -610,7 +626,7 @@ function App() {
       const taskNotice = dueTasks.length ? `${dueTasks.length} due study task${dueTasks.length === 1 ? '' : 's'}.` : '';
       
       try {
-        new Notification('EduMe Notification Reminder', { body: `${taskNotice}${upcomingNotice}${examNotice}`, icon: '/icon-192.png' });
+        new NotificationApi('EduMe Notification Reminder', { body: `${taskNotice}${upcomingNotice}${examNotice}`, icon: '/icon-192.png' });
       } catch (error) {
         console.error('Error sending notification:', error);
       }
@@ -624,7 +640,8 @@ function App() {
   }, [settings.notificationReminder, dueTasks, upcomingTasks, examDaysRemaining]);
 
   useEffect(() => {
-    if (!settings.studyReminder || !('Notification' in window) || Notification.permission !== 'granted') return undefined;
+    const NotificationApi = typeof window !== 'undefined' ? window.Notification : undefined;
+    if (!settings.studyReminder || !NotificationApi || NotificationApi.permission !== 'granted') return undefined;
 
     const sendStudyReminder = () => {
       const today = getCurrentDateKey();
@@ -649,7 +666,7 @@ function App() {
       const quizMessage = completedQuizToday ? '' : 'Take a quiz today to strengthen your preparation.';
       
       try {
-        new Notification('EduMe Study Reminder', {
+        new NotificationApi('EduMe Study Reminder', {
           body: `${taskMessage} ${goalMessage} ${streakMessage} ${quizMessage}`.trim(),
           icon: '/icon-192.png',
         });
@@ -711,6 +728,14 @@ function App() {
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, [fullScreen]);
+
+  useEffect(() => {
+    try {
+      screen.orientation?.unlock?.();
+    } catch {
+      // Orientation unlock is optional and browser-dependent.
+    }
+  }, []);
 
   useEffect(() => {
     if (!timerRunning) {
@@ -825,7 +850,7 @@ function App() {
 
   const copySupportEmail = async () => {
     try {
-      await navigator.clipboard.writeText('sbmplayerzofficial@gmail.com');
+      await navigator.clipboard.writeText(SUPPORT_EMAIL);
       triggerToast('✓ Support email copied');
     } catch {
       triggerToast('Copy is unavailable in this browser.');
@@ -833,11 +858,12 @@ function App() {
   };
 
   const requestNotificationPermission = async () => {
-    if (!('Notification' in window)) {
+    const NotificationApi = typeof window !== 'undefined' ? window.Notification : undefined;
+    if (!NotificationApi) {
       triggerToast('Notifications are not supported in this browser.');
       return false;
     }
-    const permission = await Notification.requestPermission();
+    const permission = await Promise.resolve(NotificationApi.requestPermission());
     if (permission !== 'granted') {
       triggerToast('Please allow notifications in browser settings.');
       return false;
@@ -1156,17 +1182,32 @@ function App() {
       seenQuestionTexts.add(questionText);
       return true;
     });
-    const usedQuestionIds = new Set(quizHistory.flatMap((result) => (Array.isArray(result.questionIds) ? result.questionIds : [])));
-    const freshPool = uniquePool.filter((question) => !usedQuestionIds.has(question.id));
-    const selected = [...freshPool].sort(() => Math.random() - 0.5).slice(0, Math.min(10, freshPool.length));
+    const cycleQuestionIds = new Set();
+    quizHistory
+      .filter((result) => result.exam === quizExam && result.subject === quizSubject)
+      .reverse()
+      .forEach((result) => {
+        const resultQuestionIds = Array.isArray(result.questionIds) ? result.questionIds : [];
+        if (resultQuestionIds.some((questionId) => cycleQuestionIds.has(questionId))) {
+          cycleQuestionIds.clear();
+        }
+        resultQuestionIds.forEach((questionId) => cycleQuestionIds.add(questionId));
+      });
+    const freshPool = uniquePool.filter((question) => !cycleQuestionIds.has(question.id));
+    const questionsPerSet = 5;
+    const poolForAttempt = freshPool.length >= questionsPerSet ? freshPool : uniquePool;
+    const selected = [...poolForAttempt]
+      .sort(() => Math.random() - 0.5)
+      .slice(0, Math.min(questionsPerSet, poolForAttempt.length));
     if (!selected.length) {
-      triggerToast('You have completed all unique questions for this exam and subject.');
+      triggerToast('No questions are available for this exam and subject.');
       return;
     }
 
     setQuizQuestions(selected);
     setQuizStarted(true);
     setQuizResult(null);
+    setQuizHistoryDetail(null);
     setQuizStep(0);
     setSelectedAnswers({});
     setQuizStartedAt(Date.now());
@@ -1677,6 +1718,33 @@ function App() {
   );
 
   const renderQuiz = () => {
+    if (quizHistoryDetail) {
+      const detailDate = new Date(quizHistoryDetail.date);
+      return (
+        <div className="page">
+          <div className="card inset-panel">
+            <div className="section-header">
+              <div>
+                <button className="ghost-btn" onClick={() => setQuizHistoryDetail(null)}>← Back to Quiz</button>
+                <h2 style={{ marginTop: 14 }}>Quiz Details</h2>
+              </div>
+              <span className="muted">{detailDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+            </div>
+            <p className="muted">{quizHistoryDetail.exam} · {quizHistoryDetail.subject}</p>
+            <div className="grid" style={{ gap: 14, marginTop: 16 }}>
+              <div className="card" style={{ padding: 18 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span className="muted">Score</span><strong>{quizHistoryDetail.score}</strong></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span className="muted">Correct</span><strong>{quizHistoryDetail.correct}</strong></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span className="muted">Wrong</span><strong>{quizHistoryDetail.wrong}</strong></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span className="muted">Accuracy</span><strong>{quizHistoryDetail.accuracy}%</strong></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span className="muted">Time</span><strong>{quizHistoryDetail.time}</strong></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     if (!quizStarted && !quizResult) {
       return (
         <div className="page">
@@ -1721,12 +1789,17 @@ function App() {
               <div className="empty-state">Start studying to build your progress.</div>
             ) : (
               <div className="grid" style={{ gap: 10 }}>
-                {quizHistory.slice(0, 5).map((entry) => (
-                  <div key={entry.id} className="card" style={{ padding: 12 }}>
+                {quizHistory.slice(0, showAllQuizHistory ? 50 : 5).map((entry) => (
+                  <button key={entry.id} className="card" style={{ padding: 12, textAlign: 'left', width: '100%', cursor: 'pointer' }} onClick={() => setQuizHistoryDetail(entry)}>
                     <strong>{entry.exam} · {entry.subject}</strong>
                     <div className="muted">{entry.score} · {entry.accuracy}% · {new Date(entry.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} {new Date(entry.date).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</div>
-                  </div>
+                  </button>
                 ))}
+                {quizHistory.length > 5 && (
+                  <button className="ghost-btn" onClick={() => setShowAllQuizHistory((current) => !current)}>
+                    {showAllQuizHistory ? 'Show less' : `See more (${quizHistory.length - 5})`}
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -1782,7 +1855,7 @@ function App() {
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}><span className="muted">Accuracy</span><strong>{quizResult.accuracy}%</strong></div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}><span className="muted">Time</span><strong>{quizResult.time}</strong></div>
               </div>
-              <button className="primary-btn" onClick={() => { setQuizResult(null); setQuizQuestions([]); setSelectedAnswers({}); setQuizStep(0); }}>Retake Quiz</button>
+              <button className="primary-btn" onClick={() => { setQuizResult(null); setQuizQuestions([]); setSelectedAnswers({}); setQuizStep(0); setQuizHistoryDetail(null); }}>Retake Quiz</button>
             </div>
           </div>
         </div>
@@ -1977,6 +2050,7 @@ function App() {
               .stat:nth-child(2) { background:linear-gradient(135deg,#ecfdf5,#eff6ff); border-left-color:#14b8a6; }
               .stat:nth-child(3) { background:linear-gradient(135deg,#fff7ed,#fef3c7); border-left-color:#f59e0b; }
               .stat:nth-child(4) { background:linear-gradient(135deg,#fdf2f8,#fce7f3); border-left-color:#db2777; }
+              .performance-summary { background:linear-gradient(135deg,#e0f2fe,#ecfdf5 52%,#fff7ed); border:1px solid rgba(20,184,166,.36); box-shadow:0 16px 32px rgba(15,118,110,.14); }
               .bar { height: 10px; background:#e2e8f0; border-radius:999px; overflow:hidden; margin-top:6px; }
               .bar span { display:block; height:100%; background:linear-gradient(90deg,#7c3aed,#14b8a6,#f59e0b); }
               h2 { color:#312e81; margin-top:0; }
@@ -2032,6 +2106,12 @@ function App() {
               <div class="bar"><span style="width:${chartGoals}%"></span></div>
               <p>Quiz Performance</p>
               <div class="bar"><span style="width:${chartQuiz}%"></span></div>
+            </div>
+            <div class="card performance-summary">
+              <h2>Performance Summary</h2>
+              <p><strong>Total logged study time:</strong> ${formatTimeDisplay(reportData.totalStudy * 60)}</p>
+              <p>Your consistency is improving and your focus areas are your active learning goals.</p>
+              <p>Keep practicing daily, revise weak areas, and maintain your study rhythm to achieve strong academic results.</p>
             </div>
             <div class="card">
               <h2>Overall Progress</h2>
@@ -2095,10 +2175,13 @@ function App() {
     <div className="page">
       <div className="card inset-panel">
         <div className="section-header"><div><span className="section-kicker">NEED A HAND?</span><h2>Support</h2></div></div>
-        <p className="muted">Copy the support email and send your message from any email service you prefer.</p>
+        <p className="muted">Send a support request from your device&apos;s default email app, or copy the address.</p>
         <div className="support-contact-card">
-          <div><span className="muted support-label">Support email</span><strong className="support-email">sbmplayerzofficial@gmail.com</strong></div>
-          <button className="secondary-btn" onClick={copySupportEmail}>Copy Email</button>
+          <div><span className="muted support-label">Support email</span><strong className="support-email">{SUPPORT_EMAIL}</strong></div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <a className="primary-btn" href={SUPPORT_GMAIL_URL} target="_blank" rel="noreferrer">Email Support</a>
+            <button className="secondary-btn" onClick={copySupportEmail}>Copy Email</button>
+          </div>
         </div>
         <div className="grid" style={{ gap: 12 }}>
           <a
@@ -2140,8 +2223,11 @@ function App() {
             <div className="section-header"><div><span className="section-kicker">NEED A HAND?</span><h3>Support</h3></div></div>
             <p className="muted">Get in touch anytime. We're here to help!</p>
             <div className="support-contact-card">
-              <div><span className="muted support-label">Support email</span><strong className="support-email">sbmplayerzofficial@gmail.com</strong></div>
-              <button className="secondary-btn" onClick={copySupportEmail}>Copy Email</button>
+              <div><span className="muted support-label">Support email</span><strong className="support-email">{SUPPORT_EMAIL}</strong></div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <a className="primary-btn" href={SUPPORT_GMAIL_URL} target="_blank" rel="noreferrer">Email Support</a>
+                <button className="secondary-btn" onClick={copySupportEmail}>Copy Email</button>
+              </div>
             </div>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <a
@@ -2384,7 +2470,7 @@ function App() {
                 aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
                 aria-expanded={mobileMenuOpen}
               >
-                <span className="menu-glyph" aria-hidden="true"><i /><i /><i /></span>
+                <span className="menu-glyph" aria-hidden="true"><span /><span /><span /></span>
               </button>
               <button
                 className="icon-btn theme-toggle"
@@ -2610,8 +2696,10 @@ function ToggleSwitch({ enabled, onToggle }) {
       type="button"
       className={`switch ${enabled ? 'on' : ''}`}
       aria-label={enabled ? 'Turn off' : 'Turn on'}
+      aria-pressed={enabled}
       onClick={onToggle}
     >
+      <span className="switch-label" aria-hidden="true">{enabled ? 'ON' : 'OFF'}</span>
       <span className="switch-thumb" />
     </button>
   );
