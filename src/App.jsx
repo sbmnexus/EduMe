@@ -67,7 +67,7 @@ const quizExamKeys = {
 };
 
 const SUPPORT_EMAIL = 'sbmplayerzofficial@gmail.com';
-const SUPPORT_GMAIL_URL = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(SUPPORT_EMAIL)}&su=${encodeURIComponent('EduMe Support Request')}&body=${encodeURIComponent('Hello EduMe Support,\n\n')}`;
+const SUPPORT_MAILTO_URL = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('EduMe Support Request')}&body=${encodeURIComponent('Hello EduMe Support,\n\n')}`;
 
 const QUIZ_COMPLETION_XP = 10;
 const QUIZ_CORRECT_ANSWER_XP = 5;
@@ -2179,7 +2179,7 @@ function App() {
         <div className="support-contact-card">
           <div><span className="muted support-label">Support email</span><strong className="support-email">{SUPPORT_EMAIL}</strong></div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <a className="primary-btn" href={SUPPORT_GMAIL_URL} target="_blank" rel="noreferrer">Email Support</a>
+            <a className="primary-btn" href={SUPPORT_MAILTO_URL}>Email Support</a>
             <button className="secondary-btn" onClick={copySupportEmail}>Copy Email</button>
           </div>
         </div>
@@ -2225,7 +2225,7 @@ function App() {
             <div className="support-contact-card">
               <div><span className="muted support-label">Support email</span><strong className="support-email">{SUPPORT_EMAIL}</strong></div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <a className="primary-btn" href={SUPPORT_GMAIL_URL} target="_blank" rel="noreferrer">Email Support</a>
+                <a className="primary-btn" href={SUPPORT_MAILTO_URL}>Email Support</a>
                 <button className="secondary-btn" onClick={copySupportEmail}>Copy Email</button>
               </div>
             </div>
