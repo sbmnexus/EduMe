@@ -14,6 +14,7 @@ const STORAGE_KEYS = {
   streak: 'edume_streak',
   quizHistory: 'edume_quiz_history',
   xp: 'edume_xp',
+  homeStartDismissed: 'edume_home_start_dismissed',
   installPromptDismissedAt: 'edume_install_prompt_dismissed_at',
 };
 
@@ -463,7 +464,7 @@ function App() {
   const [page, setPage] = useState('home');
   const [showOnboarding, setShowOnboarding] = useState(() => !readStorage(STORAGE_KEYS.onboarding, false));
   const [profile, setProfile] = useState(getInitialProfile);
-  const [tasks, setTasks] = useState(() => readStorage(STORAGE_KEYS.tasks, []));
+  const [tasks, setTasks] = useState(() => readStorage(STORAGE_KEYS.tasks, []).map((task) => ({ ...task, xpAwarded: task.xpAwarded ?? Boolean(task.completed) })));
   const [goals, setGoals] = useState(() => readStorage(STORAGE_KEYS.goals, []));
   const [sessions, setSessions] = useState(() => readStorage(STORAGE_KEYS.sessions, []));
   const [settings, setSettings] = useState(getInitialSettings);
@@ -483,6 +484,7 @@ function App() {
   const [quizResult, setQuizResult] = useState(null);
   const [quizHistoryDetail, setQuizHistoryDetail] = useState(null);
   const [showAllQuizHistory, setShowAllQuizHistory] = useState(false);
+  const [showProgressBadges, setShowProgressBadges] = useState(false);
   const [quizStep, setQuizStep] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [quizStartedAt, setQuizStartedAt] = useState(null);
@@ -497,6 +499,7 @@ function App() {
   const [deferredInstallPrompt, setDeferredInstallPrompt] = useState(null);
   const [showInstallHelp, setShowInstallHelp] = useState(false);
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
+  const [showHomeStart, setShowHomeStart] = useState(() => !readStorage(STORAGE_KEYS.homeStartDismissed, false));
   const [sessionSummary, setSessionSummary] = useState(null);
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [timerRunning, setTimerRunning] = useState(false);
@@ -585,6 +588,12 @@ function App() {
   useEffect(() => {
     writeStorage(STORAGE_KEYS.profile, profile);
   }, [profile]);
+
+  useEffect(() => {
+    if (!profile.targetExam || quizExam) return;
+    setQuizExam(profile.targetExam);
+    setQuizSubject(examSubjects[profile.targetExam]?.[0] || '');
+  }, [profile.targetExam, quizExam]);
 
   useEffect(() => {
     writeStorage(STORAGE_KEYS.tasks, tasks);
@@ -758,6 +767,15 @@ function App() {
   }, [toast]);
 
   useEffect(() => {
+    if (!sessionSummary) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [sessionSummary]);
+
+  useEffect(() => {
     const media = window.matchMedia('(prefers-color-scheme: dark)');
     const listener = () => {
       if (theme === 'system') {
@@ -901,10 +919,39 @@ function App() {
     }
   };
 
+  const toggleReminderNotifications = async () => {
+    const reminderEnabled = settings.studyReminder || settings.notificationReminder;
+
+    if (reminderEnabled) {
+      setSettings((current) => ({ ...current, studyReminder: false, notificationReminder: false }));
+      triggerToast('✓ Reminders disabled');
+      return;
+    }
+
+    try {
+      const granted = await requestNotificationPermission();
+      if (granted) {
+        setSettings((current) => ({ ...current, studyReminder: true, notificationReminder: true }));
+        triggerToast('✓ Study & notification reminders enabled');
+      }
+    } catch (error) {
+      console.error('Error enabling reminder notifications:', error);
+      triggerToast('Error enabling reminders. Please try again.');
+    }
+  };
+
   const openUtilityPage = (utilityPage) => {
     setUtilityHistory((current) => [...current, page]);
     setUtilityReturnPage(page);
     setPage(utilityPage);
+  };
+
+  const toggleMobileUtilityPage = (utilityPage) => {
+    if (page === utilityPage) {
+      closeUtilityPage();
+      return;
+    }
+    openUtilityPage(utilityPage);
   };
 
   const navigateToPage = (nextPage) => {
@@ -976,15 +1023,19 @@ function App() {
   const toggleTaskComplete = (taskId) => {
     let wasCompleted = false;
     let completedNow = false;
+    const taskToToggle = tasks.find((task) => task.id === taskId);
+    const shouldAwardXp = Boolean(taskToToggle && !taskToToggle.completed && !taskToToggle.xpAwarded);
     setTasks((current) => current.map((task) => {
       if (task.id !== taskId) return task;
       const completed = !task.completed;
       wasCompleted = task.completed;
       completedNow = completed;
-      return { ...task, completed, completedAt: completed ? new Date().toISOString() : null };
+      return { ...task, completed, completedAt: completed ? new Date().toISOString() : null, xpAwarded: task.xpAwarded || shouldAwardXp };
     }));
-    if (completedNow) {
+    if (shouldAwardXp) {
       setXp((current) => current + 25);
+      playSound('success');
+    } else if (completedNow) {
       playSound('success');
     } else {
       playSound('tap');
@@ -1065,6 +1116,10 @@ function App() {
       triggerToast('Please enter your exam name.');
       return;
     }
+    if (profile.examDate && profile.examDate < getCurrentDateKey()) {
+      triggerToast('Exam date should be today or later.');
+      return;
+    }
     if (profile.targetExam === 'OTHER') {
       setProfile((current) => ({ ...current, targetExam: current.customExamName.trim(), customExamName: '' }));
     }
@@ -1087,6 +1142,7 @@ function App() {
     setUtilityHistory([]);
     setUtilityReturnPage('home');
     setShowOnboarding(true);
+    setShowHomeStart(true);
     setConfirmClearOpen(false);
     triggerToast('✓ All Data Cleared');
   };
@@ -1135,7 +1191,7 @@ function App() {
       const { data } = backup;
       const nextSettings = { ...defaultSettings, ...(data.settings || {}) };
       setProfile(data.profile || defaultProfile);
-      setTasks(Array.isArray(data.tasks) ? data.tasks : []);
+      setTasks(Array.isArray(data.tasks) ? data.tasks.map((task) => ({ ...task, xpAwarded: task.xpAwarded ?? Boolean(task.completed) })) : []);
       setGoals(Array.isArray(data.goals) ? data.goals : []);
       setSessions(Array.isArray(data.sessions) ? data.sessions : []);
       setSettings(nextSettings);
@@ -1144,7 +1200,7 @@ function App() {
       setQuizHistory(Array.isArray(data.quizHistory) ? data.quizHistory : []);
       setXp(Number(data.xp || 0));
       writeStorage(STORAGE_KEYS.profile, data.profile || defaultProfile);
-      writeStorage(STORAGE_KEYS.tasks, Array.isArray(data.tasks) ? data.tasks : []);
+      writeStorage(STORAGE_KEYS.tasks, Array.isArray(data.tasks) ? data.tasks.map((task) => ({ ...task, xpAwarded: task.xpAwarded ?? Boolean(task.completed) })) : []);
       writeStorage(STORAGE_KEYS.goals, Array.isArray(data.goals) ? data.goals : []);
       writeStorage(STORAGE_KEYS.sessions, Array.isArray(data.sessions) ? data.sessions : []);
       writeStorage(STORAGE_KEYS.settings, nextSettings);
@@ -1251,10 +1307,11 @@ function App() {
       .filter((session) => session.createdAt)
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
       .slice(0, 3);
+    const isNewUser = !tasks.length && !sessions.length && !goals.length && !quizHistory.length;
 
     return (
       <div className="page">
-      <div className="section-header">
+      <div className="section-header home-welcome">
         <div>
           <p className="muted" style={{ margin: 0, fontWeight: 700 }}>Welcome</p>
           <h1 className="greeting">{getGreeting()}, {profile.name || 'Student'} 👋</h1>
@@ -1290,7 +1347,7 @@ function App() {
         </div>
       </div>
 
-      {(() => {
+      {!isNewUser && (() => {
         const challenge = getDailyChallenge(todayTasks, goals, todaysMinutes, profile);
         return (
           <div className="card" style={{ padding: 16, marginBottom: 16, borderLeft: '4px solid var(--accent)' }}>
@@ -1325,18 +1382,27 @@ function App() {
         </div>
       </div>
 
-      {!tasks.length && !sessions.length && !goals.length && !quizHistory.length && (
-        <div className="card inset-panel home-focus-panel">
+      {showHomeStart && isNewUser && (
+        <div className="card inset-panel home-focus-panel home-start-card">
           <div className="section-header">
             <div><span className="section-kicker">START HERE</span><h2 style={{ marginBottom: 6 }}>Your first study day</h2></div>
-            <span className="badge">4 simple steps</span>
+            <div className="home-start-card-actions">
+              <span className="badge">4 simple steps</span>
+              <button
+                className="home-start-close"
+                onClick={() => { writeStorage(STORAGE_KEYS.homeStartDismissed, true); setShowHomeStart(false); }}
+                aria-label="Dismiss first study day card"
+                title="Dismiss"
+              >×</button>
+            </div>
           </div>
           <div className="grid" style={{ gap: 10 }}>
-            <div className="task-item"><strong>1. Complete Profile</strong><span className="muted">Add your exam, class, and weak subjects.</span></div>
-            <div className="task-item"><strong>2. Add a Task</strong><span className="muted">Plan what you want to study today.</span></div>
-            <div className="task-item"><strong>3. Start Studying</strong><span className="muted">Use the focus timer and record your session.</span></div>
-            <div className="task-item"><strong>4. Take a Quiz</strong><span className="muted">Choose your exam and subject to practise.</span></div>
+            <div className="task-item home-start-step"><strong>1. Complete Profile</strong><span className="muted">Add your exam, class, and weak subjects.</span></div>
+            <div className="task-item home-start-step"><strong>2. Add a Task</strong><span className="muted">Plan what you want to study today.</span></div>
+            <div className="task-item home-start-step home-start-step-extra"><strong>3. Start Studying</strong><span className="muted">Use the focus timer and record your session.</span></div>
+            <div className="task-item home-start-step home-start-step-extra"><strong>4. Take a Quiz</strong><span className="muted">Choose your exam and subject to practise.</span></div>
           </div>
+          <p className="home-start-mobile-note">After the first two steps, use the timer and Quiz from the home controls.</p>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 14 }}>
             <button className="primary-btn" onClick={() => navigateToPage('profile')}>Complete Profile</button>
             <button className="ghost-btn" onClick={() => navigateToPage('planner')}>Add First Task</button>
@@ -1354,7 +1420,7 @@ function App() {
             <div className="grid" style={{ gap: 12 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
                 <span className="muted">Daily study target</span>
-                <strong>{Number(profile.dailyStudyHours || 0)}h</strong>
+                {todayGoalMinutes > 0 ? <strong>{Number(profile.dailyStudyHours || 0)}h</strong> : <button className="inline-action" onClick={() => navigateToPage('profile')}>Set target</button>}
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
                 <span className="muted">Completed</span>
@@ -1364,7 +1430,7 @@ function App() {
                 <span className="muted">Remaining</span>
                 <strong>{formatTimeDisplay(Math.max(0, (Number(profile.dailyStudyHours || 0) * 3600) - todaysMinutes * 60))}</strong>
               </div>
-              <div className="progress-bar"><span style={{ width: `${Math.min(100, goalProgress)}%` }} /></div>
+              {todayGoalMinutes > 0 ? <div className="progress-bar"><span style={{ width: `${Math.min(100, goalProgress)}%` }} /></div> : <p className="home-goal-hint">Set a daily target to track your goal progress.</p>}
             </div>
           </div>
 
@@ -1402,12 +1468,12 @@ function App() {
 
         <div className="stack">
           <div className="card list-card home-panel-reminders">
-            <div className="section-header"><h3>Study Reminders</h3></div>
+            <div className="section-header"><h3>Study Reminders</h3><button className="ghost-btn" onClick={() => openUtilityPage('notifications')}>View all</button></div>
             {upcomingTasks.length === 0 && examDaysRemaining === null ? (
               <div className="empty-state">No upcoming study or exam reminders.</div>
             ) : (
               <div>
-                {upcomingTasks.slice(0, 5).map((task) => (
+                {upcomingTasks.slice(0, 2).map((task) => (
                   <div key={task.id} className="task-item">
                     <div><strong>{task.name}</strong><div className="muted">{task.subject} · {formatShortDate(task.date)}</div></div>
                     <span className="badge">{formatShortDate(task.date)}</span>
@@ -1437,14 +1503,6 @@ function App() {
             )}
           </div>
 
-          <div className="card list-card home-panel-actions">
-            <div className="section-header"><h3>Quick Actions</h3></div>
-            <div className="grid" style={{ gap: 10 }}>
-              <button className="primary-btn" onClick={() => { playSound('tap'); setTimerFinished(false); setTimerRunning(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>Start Studying</button>
-              <button className="secondary-btn" onClick={() => openPlannerModal()}>Add Task</button>
-              <button className="ghost-btn" onClick={() => setGoalModal({ open: true, mode: 'create', goal: null })}>Add Goal</button>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -1467,7 +1525,13 @@ function App() {
     );
   };
 
-  const renderPlanner = () => (
+  const renderPlanner = () => {
+    const selectedTasks = tasks.filter((task) => task.date === calendarDate);
+    const completedSelectedTasks = selectedTasks.filter((task) => task.completed).length;
+    const plannedMinutes = selectedTasks.reduce((total, task) => total + (Number(task.duration) || 0), 0);
+    const completedMinutes = selectedTasks.filter((task) => task.completed).reduce((total, task) => total + (Number(task.duration) || 0), 0);
+
+    return (
     <div className="page planner-page">
       <div className="section-header">
         <h2>Study Planner</h2>
@@ -1495,12 +1559,17 @@ function App() {
       </div>
 
       <div className="card inset-panel planner-tasks">
-        <div className="section-header"><h3>Tasks for {formatShortDate(calendarDate)}</h3></div>
-        {tasks.filter((task) => task.date === calendarDate).length === 0 ? (
-          <div className="empty-state">No tasks planned yet. Add your first study task.</div>
+        <div className="section-header"><div><span className="section-kicker">DAILY AGENDA</span><h3>Tasks for {formatShortDate(calendarDate)}</h3></div><span className="badge">{completedSelectedTasks}/{selectedTasks.length} complete</span></div>
+        <div className="planner-day-summary">
+          <div><span className="muted">Planned</span><strong>{plannedMinutes} min</strong></div>
+          <div><span className="muted">Completed</span><strong>{completedMinutes} min</strong></div>
+          <div className="planner-day-progress"><span style={{ width: `${selectedTasks.length ? (completedSelectedTasks / selectedTasks.length) * 100 : 0}%` }} /></div>
+        </div>
+        {selectedTasks.length === 0 ? (
+          <div className="empty-state"><span>No tasks planned for this date.</span><button className="secondary-btn" onClick={() => openPlannerModal(null, calendarDate)}>Add Task</button></div>
         ) : (
           <div>
-            {tasks.filter((task) => task.date === calendarDate).map((task) => (
+            {selectedTasks.map((task) => (
               <div className="task-item" key={task.id}>
                 <div className="task-main">
                   <button className={`check-box ${task.completed ? 'checked' : ''}`} onClick={() => toggleTaskComplete(task.id)} />
@@ -1579,13 +1648,21 @@ function App() {
         )}
       </div>
     </div>
-  );
+    );
+  };
 
-  const renderProfile = () => (
+  const renderProfile = () => {
+    const profileFields = [profile.name, profile.targetExam, profile.examDate, profile.className, profile.weakSubjects, profile.dailyStudyHours];
+    const profileCompletion = Math.round((profileFields.filter((field) => String(field || '').trim()).length / profileFields.length) * 100);
+
+    return (
     <div className="page">
           <div className="card inset-panel quiz-panel quiz-setup-panel">
-        <div className="section-header"><h2>Profile</h2></div>
+        <div className="section-header"><div><h2>Profile</h2><p className="muted profile-subtitle">Personalize your study plan and progress.</p></div><span className="badge">{profileCompletion}% complete</span></div>
+        <div className="profile-completion-bar"><span style={{ width: `${profileCompletion}%` }} /></div>
+        <p className="profile-missing-hint">{profileCompletion === 100 ? 'Your study profile is ready.' : 'Complete your profile to unlock more accurate study insights.'}</p>
         <form className="form-grid" onSubmit={handleProfileSave}>
+          <div className="profile-section-label">PERSONAL &amp; EXAM DETAILS</div>
           <div>
             <label className="muted" style={{ display: 'block', marginBottom: 8 }}>Name</label>
             <input className="input" value={profile.name} onChange={(e) => setProfile((current) => ({ ...current, name: e.target.value }))} placeholder="Fill Your Name" />
@@ -1610,6 +1687,7 @@ function App() {
             <label className="muted" style={{ display: 'block', marginBottom: 8 }}>Class</label>
             <input className="input" value={profile.className} onChange={(e) => setProfile((current) => ({ ...current, className: e.target.value }))} placeholder="Fill Your Class" />
           </div>
+          <div className="profile-section-label">STUDY PREFERENCES</div>
           <div>
             <label className="muted" style={{ display: 'block', marginBottom: 8 }}>Weak Subjects</label>
             <input className="input" value={profile.weakSubjects} onChange={(e) => setProfile((current) => ({ ...current, weakSubjects: e.target.value }))} placeholder="Fill Your Weak Subjects" />
@@ -1622,36 +1700,31 @@ function App() {
         </form>
       </div>
     </div>
-  );
+    );
+  };
 
-  const renderSettings = () => (
+  const renderSettings = () => {
+    return (
     <div className="page">
       <div className="card inset-panel profile-panel">
-        <div className="section-header"><h2>⚙️ Settings</h2></div>
+        <div className="section-header"><div><h2>⚙️ Settings</h2><p className="muted settings-subtitle">Manage your study experience.</p></div></div>
         <div className="form-grid">
+          <div className="settings-section-label">PREFERENCES</div>
           <div className="card settings-card" style={{ padding: 16 }}>
-            <h3>🔔 Notifications & Reminders</h3>
+            <h3>🔔 Reminders</h3>
+            <p className="settings-description">Study and task reminders use your browser notifications.</p>
             <div className="task-item" style={{ paddingTop: 0 }}>
-              <span>Study Reminder</span>
-              <ToggleSwitch enabled={settings.studyReminder} onToggle={toggleStudyReminder} />
-            </div>
-            <div className="task-item" style={{ paddingTop: 0 }}>
-              <span>Notification Reminder</span>
+              <span>Study & Notification Reminders</span>
               <ToggleSwitch
-                enabled={settings.notificationReminder}
-                onToggle={() => {
-                  if (!settings.notificationReminder) {
-                    enableNotifications();
-                    return;
-                  }
-                  setSettings((current) => ({ ...current, notificationReminder: false }));
-                }}
+                enabled={settings.studyReminder || settings.notificationReminder}
+                onToggle={toggleReminderNotifications}
               />
             </div>
           </div>
 
           <div className="card settings-card" style={{ padding: 16 }}>
             <h3>🔊 Sound</h3>
+            <p className="settings-description">Play a small sound for timer and study actions.</p>
             <div className="task-item" style={{ paddingTop: 0 }}>
               <span>Sound Effects</span>
               <ToggleSwitch
@@ -1665,9 +1738,9 @@ function App() {
             </div>
           </div>
 
-          <div className="card" style={{ padding: 16 }}>
+          <div className="card settings-card" style={{ padding: 16 }}>
             <h3>Theme</h3>
-            <div className="nav-row">
+            <div className="nav-row settings-theme-grid">
               {['light', 'dark', 'oak', 'system'].map((option) => (
                 <button
                   key={option}
@@ -1680,8 +1753,10 @@ function App() {
             </div>
           </div>
 
-          <div className="card" style={{ padding: 16 }}>
+          <div className="settings-section-label">DATA &amp; PRIVACY</div>
+          <div className="card settings-card" style={{ padding: 16 }}>
             <h3>📦 Data</h3>
+            <p className="settings-description">Your study data stays in this browser unless you export it.</p>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <button className="secondary-btn" onClick={downloadBackup}>Export Data</button>
               <button className="secondary-btn" onClick={() => document.getElementById('import-backup-file').click()}>Import Data</button>
@@ -1689,9 +1764,10 @@ function App() {
             </div>
           </div>
 
-          <div className="card" style={{ padding: 16 }}>
+          <div className="settings-section-label">APP</div>
+          <div className="card settings-card" style={{ padding: 16 }}>
             <h3>📲 Install App</h3>
-            <p className="muted">Install EduMe as a PWA and use it like a mobile app. After installation, check your app drawer if it does not appear on the home screen.</p>
+            <p className="muted">Install EduMe for faster access and an app-like study workspace.</p>
             <button className="primary-btn" onClick={handleInstallPwa}>
               {deferredInstallPrompt ? 'Install EduMe' : 'Show install steps'}
             </button>
@@ -1704,9 +1780,9 @@ function App() {
             )}
           </div>
 
-          <div className="card" style={{ padding: 16 }}>
+          <div className="card settings-card settings-danger-zone" style={{ padding: 16 }}>
             <h3>🗑️ Clear Data</h3>
-            <p className="muted">This will permanently remove your locally stored EduMe data. Make sure you have exported your data before continuing.</p>
+            <p className="muted">Permanently remove locally stored profile, tasks, goals, sessions, and quiz data.</p>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <button className="ghost-btn" onClick={() => setConfirmClearOpen(false)}>Cancel</button>
               <button className="danger-btn" onClick={() => setConfirmClearOpen(true)}>Clear Data</button>
@@ -1715,7 +1791,8 @@ function App() {
         </div>
       </div>
     </div>
-  );
+    );
+  };
 
   const renderQuiz = () => {
     if (quizHistoryDetail) {
@@ -1725,12 +1802,12 @@ function App() {
           <div className="card inset-panel">
             <div className="section-header">
               <div>
-                <button className="ghost-btn" onClick={() => setQuizHistoryDetail(null)}>← Back to Quiz</button>
-                <h2 style={{ marginTop: 14 }}>Quiz Details</h2>
+                <button className="icon-btn utility-back-btn" onClick={() => setQuizHistoryDetail(null)} aria-label="Back to Quiz" title="Back to Quiz">←</button>
+                <h2 style={{ marginTop: 14 }}>Quiz Result</h2>
               </div>
               <span className="muted">{detailDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
             </div>
-            <p className="muted">{quizHistoryDetail.exam} · {quizHistoryDetail.subject}</p>
+            <div className="quiz-detail-heading"><div><span className="section-kicker">PRACTICE REVIEW</span><h3>{quizHistoryDetail.subject}</h3><p className="muted">{quizHistoryDetail.exam}</p></div><strong className={`quiz-detail-score quiz-accuracy-${Number(quizHistoryDetail.accuracy || 0) >= 70 ? 'good' : Number(quizHistoryDetail.accuracy || 0) >= 40 ? 'medium' : 'low'}`}>{quizHistoryDetail.accuracy}%</strong></div>
             <div className="grid" style={{ gap: 14, marginTop: 16 }}>
               <div className="card" style={{ padding: 18 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}><span className="muted">Score</span><strong>{quizHistoryDetail.score}</strong></div>
@@ -1779,20 +1856,22 @@ function App() {
                   <span>We&apos;re preparing quality practice questions for this exam. You can continue planning and tracking your study meanwhile.</span>
                 </div>
               )}
-              <button className="primary-btn" onClick={startQuiz}>Start Quiz</button>
+              {quizExam && quizSubject && quizExamKeys[quizExam] && <div className="quiz-setup-summary"><span>5 questions</span><span>Mixed practice</span><span>Estimated 10 min</span></div>}
+              {!quizExam && !profile.targetExam && <div className="quiz-profile-hint"><span className="muted">Set your exam in Profile for a personalized quiz.</span><button className="ghost-btn" onClick={() => navigateToPage('profile')}>Open Profile</button></div>}
+              <button className="primary-btn" onClick={startQuiz} disabled={!quizExam || !quizSubject || !quizExamKeys[quizExam]}>Start Quiz</button>
             </div>
           </div>
 
           <div className="card inset-panel quiz-question-panel">
-            <h3>Quiz History</h3>
+            <div className="section-header quiz-history-heading"><div><span className="section-kicker">YOUR PRACTICE</span><h3>Quiz History</h3></div>{quizHistory.length > 0 && <div className="quiz-history-summary"><strong>{quizHistory.length}</strong><span>attempts</span><strong>{Math.round(quizHistory.reduce((sum, entry) => sum + Number(entry.accuracy || 0), 0) / quizHistory.length)}%</strong><span>average</span></div>}</div>
             {quizHistory.length === 0 ? (
-              <div className="empty-state">Start studying to build your progress.</div>
+              <div className="empty-state">Complete your first quiz to see score history here.</div>
             ) : (
               <div className="grid" style={{ gap: 10 }}>
                 {quizHistory.slice(0, showAllQuizHistory ? 50 : 5).map((entry) => (
-                  <button key={entry.id} className="card" style={{ padding: 12, textAlign: 'left', width: '100%', cursor: 'pointer' }} onClick={() => setQuizHistoryDetail(entry)}>
-                    <strong>{entry.exam} · {entry.subject}</strong>
-                    <div className="muted">{entry.score} · {entry.accuracy}% · {new Date(entry.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} {new Date(entry.date).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</div>
+                  <button key={entry.id} className="card quiz-history-entry" onClick={() => setQuizHistoryDetail(entry)}>
+                    <div className="quiz-history-entry-main"><div><strong>{entry.subject}</strong><span className="muted">{entry.exam} · {new Date(entry.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span></div><strong className={`quiz-accuracy quiz-accuracy-${Number(entry.accuracy || 0) >= 70 ? 'good' : Number(entry.accuracy || 0) >= 40 ? 'medium' : 'low'}`}>{entry.accuracy}%</strong></div>
+                    <div className="quiz-history-entry-meta"><span>{entry.score}</span><span>{entry.time}</span><span>{Number(entry.accuracy || 0) >= 70 ? 'Strong result' : Number(entry.accuracy || 0) >= 40 ? 'Keep practicing' : 'Review recommended'}</span></div>
                   </button>
                 ))}
                 {quizHistory.length > 5 && (
@@ -1878,6 +1957,24 @@ function App() {
     const bestStudyDay = studyTrend.reduce((best, day) => day.minutes > best.minutes ? day : best, studyTrend[0]);
     const latestQuiz = quizHistory[0] || null;
     const goalAverage = goals.length ? Math.round(goals.reduce((sum, goal) => sum + Number(goal.progress || 0), 0) / goals.length) : 0;
+    const hasWeeklyStudyData = weeklySummary.minutes > 0;
+    const maxStudyMinutes = Math.max(1, ...studyTrend.map((day) => day.minutes));
+    const dailyTargetMinutes = Number(profile.dailyStudyHours || 0) * 60;
+    const todayTargetProgress = dailyTargetMinutes ? Math.min(100, Math.round((todaysMinutes / dailyTargetMinutes) * 100)) : 0;
+    const subjectTotals = quizHistory.reduce((summary, entry) => {
+      const subject = String(entry.subject || '').trim();
+      if (!subject) return summary;
+      const current = summary[subject] || { total: 0, accuracy: 0 };
+      current.total += 1;
+      current.accuracy += Number(entry.accuracy || 0);
+      summary[subject] = current;
+      return summary;
+    }, {});
+    const subjectNames = [...new Set([...weakSubjects, ...Object.keys(subjectTotals)])].slice(0, 5);
+    const orderedBadges = [...badges].sort((first, second) => Number(second.unlocked) - Number(first.unlocked));
+    const studyXp = sessions.reduce((total, session) => total + (Math.floor((Number(session.durationSeconds) || (Number(session.durationMinutes) || 0) * 60) / 60) * 2), 0);
+    const taskXp = tasks.filter((task) => task.xpAwarded).length * 25;
+    const quizXp = quizHistory.reduce((total, entry) => total + (Number(entry.correct || 0) * QUIZ_CORRECT_ANSWER_XP) + QUIZ_COMPLETION_XP, 0);
     const overallProgress = getOverallProgress({
       goalAverage,
       averageAccuracy,
@@ -1908,7 +2005,7 @@ function App() {
           </div>
         </div>
 
-        <div className="report-section-heading report-section-heading-01"><span className="section-kicker">01</span><div><h3>Study rhythm</h3><p className="muted">Your time, consistency, and completed work.</p></div></div>
+        <div className="report-section-heading report-section-heading-01"><span className="section-kicker">01</span><div><h3>Study &amp; task overview</h3><p className="muted">Your time, consistency, completed work, and workload.</p></div></div>
         <div className="progress-stat-grid">
           <div className="progress-stat progress-stat-violet"><span>Today&apos;s study time</span><strong>{formatTimeDisplay(todaysMinutes * 60)}</strong><small>Keep the streak alive</small></div>
           <div className="progress-stat progress-stat-teal"><span>Weekly study time</span><strong>{formatTimeDisplay(weeklySummary.minutes * 60)}</strong><small>Your last 7 days</small></div>
@@ -1916,7 +2013,35 @@ function App() {
           <div className="progress-stat progress-stat-pink"><span>Total study sessions</span><strong>{sessions.length}</strong><small>Every session counts</small></div>
         </div>
 
-        <div className="report-section-heading report-section-heading-02"><span className="section-kicker">02</span><div><h3>Task Statistics</h3><p className="muted">Overview of your task progress and workload.</p></div></div>
+        <div className="progress-panel-grid">
+          <div className="card progress-chart-panel">
+            <div className="section-header"><div><span className="section-kicker">THIS WEEK</span><h3>Study activity</h3></div><span className="muted">Minutes per day</span></div>
+            {hasWeeklyStudyData ? (
+              <div className="activity-chart" aria-label="Study activity for the last seven days">
+                {studyTrend.map((day) => <div className="chart-column" key={day.key}><strong>{day.minutes ? Math.round(day.minutes) : ''}</strong><div className="chart-track"><span style={{ height: `${day.minutes ? Math.max(8, (day.minutes / maxStudyMinutes) * 100) : 0}%` }} /></div><small>{day.label}</small></div>)}
+              </div>
+            ) : <div className="empty-state">Complete your first study session to see your weekly rhythm.</div>}
+          </div>
+          <div className="card progress-subject-panel">
+            <div className="section-header"><div><span className="section-kicker">FOCUS AREAS</span><h3>Subject performance</h3></div><button className="ghost-btn" onClick={() => navigateToPage('quiz')}>Practice</button></div>
+            {subjectNames.length ? (
+              <div className="subject-performance-list">{subjectNames.map((subject) => {
+                const result = subjectTotals[subject];
+                const accuracy = result ? Math.round(result.accuracy / result.total) : null;
+                const label = subject.replace(/\b\w/g, (letter) => letter.toUpperCase());
+                return <div className="subject-performance-item" key={subject}><div className="subject-performance-meta"><strong>{label}</strong><span>{accuracy === null ? 'Needs practice' : `${accuracy}%`}</span></div><div className="mini-progress"><span style={{ width: `${accuracy || 0}%` }} /></div><small className="muted">{accuracy === null ? 'Add a quiz result to measure this subject.' : `${result.total} quiz attempt${result.total === 1 ? '' : 's'}`}</small></div>;
+              })}</div>
+            ) : <div className="empty-state">Add weak subjects in Profile or complete a quiz to see focus areas.</div>}
+          </div>
+        </div>
+
+        <div className="card progress-target-panel">
+          <div className="section-header"><div><span className="section-kicker">TODAY</span><h3>Today vs target</h3></div><span className="badge">{dailyTargetMinutes ? `${todayTargetProgress}%` : 'Set target'}</span></div>
+          <div className="progress-target-values"><div><span className="muted">Completed</span><strong>{formatTimeDisplay(todaysMinutes * 60)}</strong></div><div><span className="muted">Target</span><strong>{dailyTargetMinutes ? formatTimeDisplay(dailyTargetMinutes * 60) : 'Not set'}</strong></div><div><span className="muted">Remaining</span><strong>{dailyTargetMinutes ? formatTimeDisplay(Math.max(0, (dailyTargetMinutes - todaysMinutes) * 60)) : 'Set a daily goal'}</strong></div></div>
+          <div className="progress-bar"><span style={{ width: `${todayTargetProgress}%` }} /></div>
+          {!dailyTargetMinutes && <button className="secondary-btn" onClick={() => navigateToPage('profile')}>Set Daily Target</button>}
+        </div>
+
         <div className="progress-stat-grid task-stat-grid">
           <div className="progress-stat progress-stat-blue"><span>📝 Total Tasks</span><strong>{taskTotal}</strong><small>All your study tasks</small></div>
           <div className="progress-stat progress-stat-green"><span>✅ Completed</span><strong>{tasksCompleted}</strong><small>Great work!</small></div>
@@ -1929,19 +2054,17 @@ function App() {
           <div className="progress-stat progress-stat-blue"><span>Goals progress</span><strong>{goalAverage}%</strong><div className="mini-progress"><span style={{ width: `${goalAverage}%` }} /></div></div>
           <div className="progress-stat progress-stat-green"><span>Quiz accuracy</span>{reportQuizUnavailable ? <><strong>Unavailable</strong><small>Quiz is currently unavailable for this exam.</small></> : <><strong>{averageAccuracy}%</strong><div className="mini-progress"><span style={{ width: `${averageAccuracy}%` }} /></div></>}</div>
           <div className="progress-stat progress-stat-indigo"><span>Quiz attempts</span>{reportQuizUnavailable ? <><strong>Unavailable</strong><small>Quiz is currently unavailable for this exam.</small></> : <><strong>{quizHistory.length}</strong><small>Practice builds confidence</small></>}</div>
-          <div className="progress-stat progress-stat-gold"><span>Total XP</span><strong>{xp}</strong><small>{levelInfo.currentLevelXp} / 250 to next level</small></div>
-          <div className="progress-stat progress-stat-pink"><span>Latest quiz score</span>{reportQuizUnavailable || !latestQuiz ? <><strong>{reportQuizUnavailable ? 'Unavailable' : 'No data'}</strong><small>{reportQuizUnavailable ? 'Quiz is currently unavailable for this exam.' : 'Complete a quiz to see your score.'}</small></> : <><strong>{latestQuiz.score}</strong><small>{latestQuiz.accuracy}% accuracy</small></>}</div>
+          <div className="progress-stat progress-stat-gold"><span>Total XP</span><strong>{xp}</strong><small>{levelInfo.currentLevelXp} / 250 to next level</small><div className="xp-breakdown">{studyXp} study · {taskXp} tasks · {quizXp} quiz</div></div>
         </div>
 
         <div className="report-section-heading report-section-heading-04"><span className="section-kicker">04</span><div><h3>Study insights</h3><p className="muted">A closer look at your recent study pattern.</p></div></div>
         <div className="progress-stat-grid progress-stat-grid-compact">
-          <div className="progress-stat progress-stat-teal"><span>Best study day</span><strong>{bestStudyDay.minutes ? `${Math.round(bestStudyDay.minutes)} min` : 'No data'}</strong><small>{bestStudyDay.minutes ? bestStudyDay.label : 'Complete a session to see your best day.'}</small></div>
-          <div className="progress-stat progress-stat-orange"><span>Average daily study</span><strong>{formatTimeDisplay((weeklySummary.minutes / 7) * 60)}</strong><small>Based on the last 7 days</small></div>
-          <div className="progress-stat progress-stat-blue"><span>Weekly share of monthly time</span><strong>{monthlySummary.minutes ? `${Math.round((weeklySummary.minutes / monthlySummary.minutes) * 100)}%` : 'No data'}</strong><small>Weekly study time compared with this month</small></div>
+          <div className="progress-stat progress-stat-teal"><span>Best study day</span><strong>{bestStudyDay.minutes > 0.5 ? `${Math.round(bestStudyDay.minutes)} min` : 'No data'}</strong><small>{bestStudyDay.minutes > 0.5 ? bestStudyDay.label : 'Complete a longer session to see your best day.'}</small></div>
+          <div className="progress-stat progress-stat-orange"><span>Average daily study</span><strong>{hasWeeklyStudyData ? formatTimeDisplay((weeklySummary.minutes / 7) * 60) : 'No data'}</strong><small>{hasWeeklyStudyData ? 'Based on the last 7 days' : 'Complete a session to see your average.'}</small></div>
         </div>
 
         <div className="level-panel card report-section-05">
-          <div className="section-header"><div><span className="section-kicker">05</span><h3>Next level unlocked</h3></div><strong className="highlight-text">Level {levelInfo.level}</strong></div>
+          <div className="section-header"><div><span className="section-kicker">05</span><h3>Progress to next level</h3></div><strong className="highlight-text">Level {levelInfo.level + 1}</strong></div>
           <div className="progress-bar"><span style={{ width: `${levelInfo.progress}%` }} /></div>
           <div className="level-meta"><span>{levelInfo.progress}% complete</span><span>{250 - levelInfo.currentLevelXp} XP to go</span></div>
         </div>
@@ -1949,22 +2072,19 @@ function App() {
         <div className="card inset-panel badges-panel">
           <div className="section-header"><h3>Badges</h3></div>
           <div className="badge-grid">
-            {badges.map((badge, index) => (
+            {orderedBadges.slice(0, showProgressBadges ? orderedBadges.length : 4).map((badge, index) => (
               <div key={badge.id} className={`achievement ${badge.unlocked ? 'achievement-unlocked' : ''}`} style={{ '--badge-index': index }}>
                 <div className="achievement-icon">{badge.name.slice(0, 2)}</div>
                 <div><strong>{badge.name.slice(2)}</strong><span>{badge.unlocked ? 'Unlocked' : 'Locked'}</span></div>
               </div>
             ))}
           </div>
+          {orderedBadges.length > 4 && <button className="ghost-btn progress-inline-toggle" onClick={() => setShowProgressBadges((current) => !current)}>{showProgressBadges ? 'Show fewer badges' : `View all badges (${orderedBadges.length})`}</button>}
         </div>
 
         <div className="card inset-panel report-download-panel">
-          <div className="section-header"><h3>Reports</h3></div>
-          <p className="muted">Take your progress with you and see the bigger picture.</p>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <button className="primary-btn" onClick={() => downloadReport('weekly')}>↗ Download Weekly Report</button>
-            <button className="secondary-btn" onClick={() => downloadReport('monthly')}>↗ Download Monthly Report</button>
-          </div>
+          <div className="section-header"><div><h3>Reports</h3><p className="muted">Export your study summary when you need it.</p></div></div>
+          <div className="progress-report-actions"><button className="primary-btn" onClick={() => downloadReport('weekly')}>↗ Download Weekly Report</button><button className="secondary-btn" onClick={() => downloadReport('monthly')}>↗ Download Monthly Report</button></div>
         </div>
       </div>
     );
@@ -2001,21 +2121,52 @@ function App() {
         return !Number.isNaN(date.getTime()) && date >= periodStart && date <= periodEnd;
       };
       const periodSessions = sessions.filter((session) => isInPeriod(session.createdAt));
-      const periodTasks = tasks.filter((task) => task.completed && isInPeriod(task.completedAt || `${task.date}T23:59:59`));
+      const periodTasksAll = tasks.filter((task) => task.date && isInPeriod(`${task.date}T12:00:00`));
+      const periodTasks = periodTasksAll.filter((task) => task.completed && isInPeriod(task.completedAt || `${task.date}T23:59:59`));
+      const periodTasksPending = periodTasksAll.filter((task) => !task.completed);
+      const periodTasksOverdue = periodTasksPending.filter((task) => task.date < getCurrentDateKey());
       const periodQuizzes = quizHistory.filter((entry) => isInPeriod(entry.date));
       const totalStudy = periodSessions.reduce((sum, session) => sum + ((Number(session.durationSeconds) || (Number(session.durationMinutes) || 0) * 60) / 60), 0);
       const periodQuizAccuracy = periodQuizzes.length ? Math.round(periodQuizzes.reduce((sum, entry) => sum + Number(entry.accuracy || 0), 0) / periodQuizzes.length) : 0;
       const periodXp = periodSessions.reduce((sum, session) => sum + (Math.floor((Number(session.durationSeconds) || (Number(session.durationMinutes) || 0) * 60) / 60) * 2), 0)
-        + (periodTasks.length * 25)
+        + (periodTasks.filter((task) => task.xpAwarded).length * 25)
         + periodQuizzes.reduce((sum, entry) => sum + (Number(entry.correct || 0) * QUIZ_CORRECT_ANSWER_XP) + QUIZ_COMPLETION_XP, 0);
+      const reportTaskCompletionRate = periodTasksAll.length ? Math.round((periodTasks.length / periodTasksAll.length) * 100) : 0;
+      const reportStudyTimeProgress = todayGoalMinutes > 0 ? Math.min(100, Math.round((totalStudy / (todayGoalMinutes * (period === 'weekly' ? 7 : 30))) * 100)) : 0;
+      const reportOverallProgress = getOverallProgress({
+        goalAverage: getGoalsProgress(goals),
+        averageAccuracy: periodQuizAccuracy,
+        taskCompletionRate: reportTaskCompletionRate,
+        studyTimeProgress: reportStudyTimeProgress,
+        hasGoals: goals.length > 0,
+        hasQuizHistory: periodQuizzes.length > 0,
+        hasTasks: periodTasksAll.length > 0,
+        hasStudyGoal: todayGoalMinutes > 0,
+      });
+      const activityStart = new Date(now);
+      activityStart.setDate(now.getDate() - 6);
+      activityStart.setHours(0, 0, 0, 0);
+      const reportActivity = Array.from({ length: 7 }, (_, index) => {
+        const day = new Date(activityStart);
+        day.setDate(activityStart.getDate() + index);
+        const key = buildDateKey(day);
+        const minutes = periodSessions.filter((session) => session.dateKey === key).reduce((sum, session) => sum + ((Number(session.durationSeconds) || (Number(session.durationMinutes) || 0) * 60) / 60), 0);
+        return { label: day.toLocaleDateString(undefined, { weekday: 'short' }), minutes };
+      });
+      const reportActivityMax = Math.max(1, ...reportActivity.map((day) => day.minutes));
+      const formatReportDate = (date) => new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(date);
       const reportData = {
         name: profile.name || 'Student',
         targetExam: profile.targetExam || 'Not set',
-        periodLabel: period === 'weekly' ? 'Last 7 days' : new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(new Date()),
+        periodLabel: `${formatReportDate(periodStart)} - ${formatReportDate(periodEnd)}`,
         downloadedAt: new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date()),
         totalStudy,
         averageDailyStudy: totalStudy / (period === 'weekly' ? 7 : 30),
         tasksCompleted: periodTasks.length,
+        tasksTotal: periodTasksAll.length,
+        tasksPending: periodTasksPending.length,
+        tasksOverdue: periodTasksOverdue.length,
+        taskCompletionRate: reportTaskCompletionRate,
         goalsProgress: getGoalsProgress(goals),
         quizUnavailable: profile.targetExam && !quizExamKeys[profile.targetExam],
         quizAttempts: profile.targetExam && !quizExamKeys[profile.targetExam] ? null : periodQuizzes.length,
@@ -2024,12 +2175,20 @@ function App() {
         streakStatus: getStreakStatus({ streak, todaysMinutes }),
         xp: periodXp,
         level: levelInfo.level,
+        overallProgress: reportOverallProgress,
         badges,
       };
 
       const chartStudy = Math.min(100, Math.round((reportData.totalStudy / 360) * 100));
-      const chartGoals = reportData.goalsProgress;
-      const chartQuiz = reportData.quizUnavailable ? 0 : reportData.quizAttempts ? reportData.quizAccuracy : 0;
+      const reportSummary = reportData.totalStudy || reportData.tasksTotal || reportData.quizAttempts
+        ? `You logged ${formatTimeDisplay(reportData.totalStudy * 60)} of study time, completed ${reportData.tasksCompleted} of ${reportData.tasksTotal} planned tasks, and made ${reportData.quizAttempts || 0} quiz attempt${reportData.quizAttempts === 1 ? '' : 's'} in this period.`
+        : 'No study activity has been recorded in this period yet.';
+      const reportNextSteps = [];
+      if (!reportData.totalStudy) reportNextSteps.push('Start one focused study session.');
+      if (reportData.tasksPending) reportNextSteps.push(`Review your ${reportData.tasksPending} pending task${reportData.tasksPending === 1 ? '' : 's'}.`);
+      if (!reportData.quizUnavailable && !reportData.quizAttempts) reportNextSteps.push('Complete a quiz to measure your preparation.');
+      if (!reportNextSteps.length) reportNextSteps.push('Keep your study rhythm consistent next period.');
+      const activityHtml = reportActivity.map((day) => `<div class="activity-day"><strong>${day.minutes ? Math.round(day.minutes) : 0}</strong><div class="activity-track"><span style="height:${day.minutes ? Math.max(8, (day.minutes / reportActivityMax) * 100) : 0}%"></span></div><small>${day.label}</small></div>`).join('');
       const html = `
         <html>
           <head>
@@ -2042,8 +2201,17 @@ function App() {
               .brand img { width:38px; height:38px; border-radius:10px; object-fit:cover; box-shadow:0 6px 14px rgba(76,29,149,.18); }
               .badge { background:linear-gradient(135deg,#7c3aed,#db2777); color:#fff; display:inline-block; padding:8px 12px; border-radius:999px; box-shadow:0 8px 18px rgba(124,58,237,.2); }
               .grid { display:grid; grid-template-columns: repeat(2, minmax(180px, 1fr)); gap:14px; }
+              .kpi-grid { display:grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap:12px; }
               .badge-grid { display:flex; flex-wrap:wrap; align-items:stretch; gap:10px; }
               .stat { background:linear-gradient(135deg,#eef2ff,#ecfeff); border-left:5px solid #4f46e5; border-radius:14px; padding:16px; }
+              .stat strong, .stat div { display:block; margin-top:6px; font-size:20px; }
+              .activity-grid { display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); align-items:end; gap:10px; min-height:170px; }
+              .activity-day { display:grid; grid-template-rows:20px 1fr 20px; justify-items:center; gap:6px; height:150px; }
+              .activity-track { width:24px; height:100%; display:flex; align-items:flex-end; overflow:hidden; border-radius:999px; background:#e2e8f0; }
+              .activity-track span { display:block; width:100%; border-radius:inherit; background:linear-gradient(180deg,#7c3aed,#14b8a6); }
+              .activity-day small { color:#64748b; font-size:11px; }
+              .next-steps { background:linear-gradient(135deg,#e0f2fe,#ecfdf5); border:1px solid rgba(20,184,166,.3); }
+              .next-steps li { margin:7px 0; }
               .badge-card { flex:0 0 auto; min-width:120px; background:linear-gradient(135deg,#fff7ed,#fdf2f8); border:1px solid #f5b4c8; border-radius:10px; padding:10px; text-align:center; }
               .badge-card strong { display:block; font-size:13px; color:#9d174d; }
               .badge-card span { display:block; margin-top:4px; font-size:11px; color:#15803d; font-weight:700; }
@@ -2058,7 +2226,7 @@ function App() {
               .card:nth-of-type(3) h2 { color:#c2410c; }
               .card:last-child { background:linear-gradient(135deg,#5124b7,#0f9f9a); color:#fff; text-align:center; }
               .card:last-child h2, .card:last-child p { color:#fff; }
-              @media (max-width:640px) { body { padding:16px; } .header { align-items:flex-start; gap:14px; flex-direction:column; } .grid { grid-template-columns:1fr; } .card { padding:18px; } }
+              @media (max-width:640px) { body { padding:16px; } .header { align-items:flex-start; gap:14px; flex-direction:column; } .grid, .kpi-grid { grid-template-columns:1fr 1fr; } .activity-grid { gap:5px; } .activity-day strong { font-size:12px; } .activity-track { width:18px; } .card { padding:18px; } }
             </style>
           </head>
           <body>
@@ -2073,24 +2241,26 @@ function App() {
               <p><strong>Downloaded:</strong> ${reportData.downloadedAt}</p>
             </div>
             <div class="card">
-              <h2>Study Summary</h2>
-              <div class="grid">
-                <div class="stat"><strong>Total Study Time</strong><div>${formatTimeDisplay(reportData.totalStudy * 60)}</div></div>
-                <div class="stat"><strong>Tasks Completed</strong><div>${reportData.tasksCompleted}</div></div>
-                <div class="stat"><strong>Goals Progress</strong><div>${reportData.goalsProgress}%</div></div>
+              <h2>Study Overview</h2>
+              <div class="kpi-grid">
+                <div class="stat"><strong>Study Time</strong><div>${formatTimeDisplay(reportData.totalStudy * 60)}</div></div>
+                <div class="stat"><strong>Tasks Done</strong><div>${reportData.tasksCompleted} / ${reportData.tasksTotal}</div></div>
+                <div class="stat"><strong>Goals</strong><div>${reportData.goalsProgress}%</div></div>
                 <div class="stat"><strong>Streak</strong><div>${reportData.streak} days</div></div>
-                <div class="stat"><strong>Streak Status</strong><div>${reportData.streakStatus}</div></div>
-                <div class="stat"><strong>Average Daily Study Time</strong><div>${formatTimeDisplay(reportData.averageDailyStudy * 60)}</div></div>
               </div>
             </div>
             <div class="card">
-              <h2>Quiz Performance</h2>
+              <h2>Task &amp; Quiz Performance</h2>
               <div class="grid">
-                <div class="stat"><strong>Quiz Attempts</strong><div>${reportData.quizUnavailable ? `Quiz coming soon for ${reportData.targetExam}.` : reportData.quizAttempts}</div></div>
-                <div class="stat"><strong>Accuracy</strong><div>${reportData.quizUnavailable ? `Quiz coming soon for ${reportData.targetExam}.` : `${reportData.quizAccuracy}%`}</div></div>
-                <div class="stat"><strong>XP Earned in Period</strong><div>${reportData.xp}</div></div>
-                <div class="stat"><strong>Current Level</strong><div>${reportData.level}</div></div>
+                <div class="stat"><strong>Task Completion</strong><div>${reportData.taskCompletionRate}%</div><small>${reportData.tasksPending} pending · ${reportData.tasksOverdue} overdue</small></div>
+                <div class="stat"><strong>Quiz Attempts</strong><div>${reportData.quizUnavailable ? `Unavailable for ${reportData.targetExam}` : reportData.quizAttempts || 'No data'}</div></div>
+                <div class="stat"><strong>Quiz Accuracy</strong><div>${reportData.quizUnavailable ? 'Unavailable' : reportData.quizAttempts ? `${reportData.quizAccuracy}%` : 'No data'}</div></div>
+                <div class="stat"><strong>XP Earned</strong><div>${reportData.xp}</div><small>Level ${reportData.level}</small></div>
               </div>
+            </div>
+            <div class="card">
+              <h2>Weekly Study Activity</h2>
+              <div class="activity-grid">${activityHtml}</div>
             </div>
             <div class="card">
               <h2>Badges</h2>
@@ -2098,24 +2268,15 @@ function App() {
                 ${reportData.badges.filter((badge) => badge.unlocked).map((badge) => `<div class="badge-card"><strong>${badge.name.slice(2)}</strong><span>Unlocked</span></div>`).join('') || '<p>No badges unlocked yet.</p>'}
               </div>
             </div>
-            <div class="card">
-              <h2>Visual Analytics</h2>
-              <p>Study Progress</p>
-              <div class="bar"><span style="width:${chartStudy}%"></span></div>
-              <p>Goal Completion</p>
-              <div class="bar"><span style="width:${chartGoals}%"></span></div>
-              <p>Quiz Performance</p>
-              <div class="bar"><span style="width:${chartQuiz}%"></span></div>
-            </div>
             <div class="card performance-summary">
               <h2>Performance Summary</h2>
-              <p><strong>Total logged study time:</strong> ${formatTimeDisplay(reportData.totalStudy * 60)}</p>
-              <p>Your consistency is improving and your focus areas are your active learning goals.</p>
-              <p>Keep practicing daily, revise weak areas, and maintain your study rhythm to achieve strong academic results.</p>
+              <p>${reportSummary}</p>
+              <h3>Recommended next steps</h3>
+              <ul class="next-steps-list">${reportNextSteps.map((step) => `<li>${step}</li>`).join('')}</ul>
             </div>
-            <div class="card">
+            <div class="card next-steps">
               <h2>Overall Progress</h2>
-              <p>${Math.min(100, Math.round((chartStudy + chartGoals + chartQuiz) / 3))}% Overall Progress</p>
+              <p><strong>${reportData.overallProgress}%</strong> based on study time, goals, tasks, and quiz performance in this report period.</p>
             </div>
           </body>
         </html>
@@ -2210,7 +2371,7 @@ function App() {
             <strong className="highlight-text">App Information</strong>
             <ul style={{ margin: '10px 0 0', paddingLeft: 18, lineHeight: 1.8 }}>
               <li>App Name: <span className="highlight-text">EduMe</span></li>
-              <li>Version: <span className="highlight-text">EduMe v1.1</span></li>
+              <li>Version: <button className="version-link" onClick={() => openUtilityPage('whats-new')}>EduMe v1.1</button></li>
               <li>Type: Student Study & Productivity App</li>
               <li>Designed And Developed by <span className="highlight-text">SBM</span></li>
             </ul>
@@ -2246,18 +2407,43 @@ function App() {
     </div>
   );
 
+  const renderWhatsNew = () => (
+    <div className="page utility-page">
+      <div className="utility-page-header">
+        <button className="icon-btn utility-back-btn" onClick={closeUtilityPage} aria-label="Go back" title="Go back">←</button>
+        <div><span className="eyebrow">EDUME V1.1</span><h1>What&apos;s New</h1></div>
+      </div>
+      <div className="card whats-new-hero">
+        <span className="section-kicker">A MORE FOCUSED STUDY WORKSPACE</span>
+        <h2>Plan clearly. Study consistently. See the difference.</h2>
+        <p className="muted">Version 1.1 brings a more complete daily study workflow with clearer planning, progress, and personal insights.</p>
+      </div>
+      <div className="whats-new-grid">
+        {[
+          { icon: '📚', title: 'Smarter study planning', text: 'Daily agenda summaries show planned and completed minutes for the selected date.' },
+          { icon: '📊', title: 'Richer progress insights', text: 'Track weekly study activity, daily targets, subject performance, XP sources, and next-level progress.' },
+          { icon: '📝', title: 'Better quiz history', text: 'Review accuracy, score, timing, performance status, and detailed quiz results in one place.' },
+          { icon: '🔥', title: 'Clearer study streaks', text: 'See current and best streaks, qualifying sessions, and your last seven days of consistency.' },
+          { icon: '🔔', title: 'Focused notifications', text: 'Today&apos;s study plan, urgent tasks, exam reminders, and useful next actions are organized together.' },
+          { icon: '🎨', title: 'A more polished experience', text: 'Responsive layouts, improved onboarding, theme support, and clearer settings make EduMe easier to use.' },
+        ].map((item) => <div className="card whats-new-item" key={item.title}><span className="whats-new-icon">{item.icon}</span><div><h3>{item.title}</h3><p className="muted" dangerouslySetInnerHTML={{ __html: item.text }} /></div></div>)}
+      </div>
+      <div className="card whats-new-footer"><strong>Built for your next focused session.</strong><span className="muted">Your existing local data stays on this device while you explore the update.</span></div>
+    </div>
+  );
+
   const renderTerms = () => (
     <div className="page">
       <div className="card inset-panel">
         <div className="section-header"><h2>Terms & Conditions</h2><button className="ghost-btn utility-back-btn" onClick={closeUtilityPage} aria-label="Go back" title="Go back">←</button></div>
         <div style={{ display: 'grid', gap: 18, lineHeight: 1.7 }} className="muted">
           <section><h3>1. Acceptance of these terms</h3><p>By accessing or using EduMe, you agree to these Terms & Conditions. If you do not agree with any part of these terms, please discontinue use of the application.</p></section>
-          <section><h3>2. About EduMe</h3><p>EduMe is a browser-based study planning and productivity application. It provides tools for organizing tasks, setting goals, tracking study sessions, practicing available quizzes, viewing progress, and generating personal reports.</p></section>
+          <section><h3>2. About EduMe</h3><p>EduMe is a local-first study planning and productivity application for organizing tasks, goals, focus sessions, quizzes, reminders, streaks, progress insights, and personal reports.</p></section>
           <section><h3>3. Personal use and responsibility</h3><p>You may use EduMe for personal, non-commercial study planning. You are responsible for the accuracy of the information you enter, including your profile, exam dates, tasks, goals, quiz activity, and study records.</p></section>
           <section><h3>4. Educational disclaimer</h3><p>EduMe is a productivity and study-support tool. It is not a school, coaching service, examination authority, teacher, or source of official academic advice. Always verify important dates, requirements, results, and preparation decisions with the relevant official source.</p></section>
-          <section><h3>5. Your data and backups</h3><p>Core app data is stored locally in your browser or device. EduMe does not promise automatic online backup or recovery. You are responsible for exporting backups when needed and for keeping exported files secure.</p></section>
+          <section><h3>5. Your data and backups</h3><p>Profile details, planner data, goals, sessions, quiz history, XP, theme preferences, and reminder settings are stored locally in your browser. EduMe does not provide automatic server backup. Export backups when needed and keep exported files secure.</p></section>
           <section><h3>6. Acceptable use</h3><p>You must not misuse EduMe, attempt to interfere with its operation, access it through unauthorized methods, introduce malicious code, or use it in a way that violates applicable law or the rights of others.</p></section>
-          <section><h3>7. Availability and changes</h3><p>EduMe is provided on an availability basis. Features, supported exams, quiz content, designs, and functionality may be updated, suspended, or removed without prior notice. Quiz availability may vary by exam and available question data.</p></section>
+          <section><h3>7. Availability and changes</h3><p>EduMe is provided on an availability basis. Features, supported exams, quiz content, designs, and functionality may change over time. Quiz availability may vary by exam and available question data. Version updates may add, revise, or remove features.</p></section>
           <section><h3>8. Third-party services</h3><p>Support and feedback features may open external services, including Google Forms. Those services are operated independently and are subject to their own terms and privacy policies. EduMe is not responsible for their content, availability, or handling of information.</p></section>
           <section><h3>9. Intellectual property</h3><p>EduMe, its branding, interface, and original content are owned by or used by SBM and may not be copied, modified, distributed, or commercially exploited without permission.</p></section>
           <section><h3>10. Limitation of responsibility</h3><p>To the extent permitted by applicable law, EduMe and its developers are not responsible for loss of locally stored data, missed deadlines, inaccurate user-entered information, interruptions, or decisions made solely on the basis of the application.</p></section>
@@ -2273,9 +2459,9 @@ function App() {
         <div className="section-header"><h2>Privacy Policy</h2><button className="ghost-btn utility-back-btn" onClick={closeUtilityPage} aria-label="Go back" title="Go back">←</button></div>
         <div style={{ display: 'grid', gap: 18, lineHeight: 1.7 }} className="muted">
           <section><h3>1. Overview</h3><p>This Privacy Policy explains how EduMe handles information when you use the application. EduMe is designed as a local-first study planner and does not require an account for its core features.</p></section>
-          <section><h3>2. Information stored locally</h3><p>EduMe may store your name, target exam, exam date, class, weak subjects, tasks, goals, study sessions, quiz history, theme preference, notification settings, sound settings, streak, XP, badges, and generated report-related data in your browser&apos;s Local Storage.</p></section>
+          <section><h3>2. Information stored locally</h3><p>EduMe may store your name, target exam, exam date, class, weak subjects, daily study target, tasks, goals, study sessions, quiz history, theme preference, reminder settings, sound settings, streak, XP, badges, and generated report-related data in your browser&apos;s Local Storage.</p></section>
           <section><h3>3. How your information is used</h3><p>This information is used on your device to display your planner, calculate progress, maintain streaks and XP, provide quiz history, show reminders, and generate weekly or monthly reports. Core data is not automatically sent to an EduMe server.</p></section>
-          <section><h3>4. Notifications and browser permissions</h3><p>If you enable reminders and grant browser permission, EduMe may use your browser&apos;s notification feature to show study, task, or exam reminders. You can disable permission or reminders through your browser or the app settings. Optional sound effects use your browser&apos;s audio capability.</p></section>
+          <section><h3>4. Notifications and browser permissions</h3><p>If you enable reminders and grant browser permission, EduMe may use your browser&apos;s notification feature to show study, task, or exam reminders. Browser permission is controlled by your device and browser. You can disable reminders in EduMe Settings or revoke browser permission separately. Optional sound effects use your browser&apos;s audio capability.</p></section>
           <section><h3>5. Export, import, and deletion</h3><p>Exported backups are created locally and remain on your device unless you choose to share them. Imported data replaces or updates local app data according to the import process. Using EduMe&apos;s Clear Data option or clearing browser site data removes locally stored information. Keep a backup before deleting data.</p></section>
           <section><h3>6. External services</h3><p>The optional feedback form is hosted by Google Forms. If you submit information there, Google may process it under its own privacy policy. Copying the support email only uses your browser&apos;s clipboard after you request the action.</p></section>
           <section><h3>7. Analytics and advertising</h3><p>EduMe&apos;s core functionality does not require an account, paid API, advertising profile, or analytics tracker. External services opened by you may use their own cookies, logs, or tracking practices.</p></section>
@@ -2310,7 +2496,7 @@ function App() {
           ) : (
             <button className="secondary-btn" onClick={() => { playSound('tap'); setTimerRunning(false); }}>Pause</button>
           )}
-          <button className="ghost-btn" onClick={() => { playSound('tap'); setTimerFinished(false); setTimerRunning(true); }}>Resume</button>
+          {timerSeconds > 0 && <button className="ghost-btn" onClick={() => { playSound('tap'); setTimerFinished(false); setTimerRunning(true); }}>Resume</button>}
           <button className="ghost-btn" onClick={openFocusMode}>Focus Mode</button>
           <button className="danger-btn" onClick={handleTimerFinish}>Finish Session</button>
         </div>
@@ -2326,6 +2512,8 @@ function App() {
     const completedQuizToday = quizHistory.some((entry) => String(entry.date || '').slice(0, 10) === getCurrentDateKey());
     const latestQuiz = quizHistory[0] || null;
     const latestQuizNeedsReview = latestQuiz && Number(latestQuiz.accuracy || 0) < 60;
+    const urgentNotificationCount = missedTasks.length + pendingTodayTasks.length;
+    const hasExamSoon = examDaysRemaining !== null && examDaysRemaining >= 0 && examDaysRemaining <= 14;
 
     return (
       <div className="page utility-page">
@@ -2333,36 +2521,46 @@ function App() {
           <button className="icon-btn utility-back-btn" onClick={closeUtilityPage} aria-label="Go back" title="Go back">←</button>
           <div><span className="eyebrow">YOUR UPDATES</span><h1>Notifications</h1></div>
         </div>
+        <div className="notification-summary card">
+          <div>
+            <span className="section-kicker">TODAY&apos;S OVERVIEW</span>
+            <strong>{urgentNotificationCount ? `${urgentNotificationCount} study update${urgentNotificationCount === 1 ? '' : 's'} need attention` : 'You are all caught up'}</strong>
+            <span className="muted">{hasExamSoon ? `Exam in ${examDaysRemaining} day${examDaysRemaining === 1 ? '' : 's'}.` : 'Keep your plan moving with one focused action.'}</span>
+          </div>
+          <button className="primary-btn notification-summary-action" onClick={() => {
+            if (missedTasks.length || pendingTodayTasks.length) navigateToPage('planner');
+            else if (examDaysRemaining === null) navigateToPage('profile');
+            else { setTimerFinished(false); setTimerRunning(true); navigateToPage('home'); }
+          }}>
+            {missedTasks.length || pendingTodayTasks.length ? 'Open Planner' : examDaysRemaining === null ? 'Set Exam Date' : 'Start Studying'}
+          </button>
+        </div>
         <div className="notification-list">
-          <section className="card notification-card notification-study">
-            <div className="notification-card-title"><span className="notification-symbol">📚</span><div><h2>Study Reminder</h2><span className="muted">Your plan for today</span></div></div>
+          {missedTasks.length > 0 && <section className="card notification-card notification-missed notification-priority-card">
+            <div className="notification-card-title"><span className="notification-symbol">⚠️</span><div><h2>Missed Tasks</h2><span className="muted">Tasks that need your attention</span></div></div>
+            <p><strong>{missedTasks.length} overdue task{missedTasks.length === 1 ? '' : 's'}.</strong> Reschedule or complete them to stay on track.</p>
+            <div className="notification-row-list">{missedTasks.map((task) => <div className="notification-row" key={task.id}><span>{task.name}</span><span className="badge">{formatShortDate(task.date)}</span></div>)}</div>
+            <button className="secondary-btn notification-action-btn" onClick={() => navigateToPage('planner')}>Open Planner</button>
+          </section>}
+
+          <section className="card notification-card notification-study notification-priority-card">
+            <div className="notification-card-title"><span className="notification-symbol">📚</span><div><h2>Today&apos;s Study Plan</h2><span className="muted">Tasks, goals, and your next action</span></div></div>
             {pendingTodayTasks.length > 0 && <p><strong>{pendingTodayTasks.length} task{pendingTodayTasks.length === 1 ? '' : 's'} pending today.</strong> Keep your plan moving.</p>}
             {remainingGoalMinutes > 0 && <p><strong>{formatTimeDisplay(remainingGoalMinutes * 60)} left</strong> to complete today&apos;s study goal.</p>}
             {remainingGoalMinutes === 0 && todaysMinutes > 0 && <p><strong>Great work!</strong> You completed today&apos;s study goal.</p>}
-            {!completedQuizToday && <p>Take a quiz today to strengthen your preparation.</p>}
-            {pendingTodayTasks.length === 0 && remainingGoalMinutes === 0 && completedQuizToday && <p>You are all caught up for today.</p>}
+            {upcomingNotificationTasks.slice(0, 3).map((task) => <div className="notification-row" key={task.id}><span>{task.name}</span><span className="badge">{formatShortDate(task.date)}</span></div>)}
+            {pendingTodayTasks.length === 0 && upcomingNotificationTasks.length === 0 && remainingGoalMinutes === 0 && <p className="muted">You are all caught up for today.</p>}
+            <button className="primary-btn notification-action-btn" onClick={() => { setTimerFinished(false); setTimerRunning(true); navigateToPage('home'); }}>Start Studying</button>
           </section>
 
           <section className="card notification-card notification-focus">
             <div className="notification-card-title"><span className="notification-symbol">🎯</span><div><h2>Weak Subject Focus</h2><span className="muted">Extra attention for today</span></div></div>
-            {weakSubjects.length > 0 ? <><div className="focus-subject-list">{weakSubjects.map((subject) => <span className="focus-subject" key={subject}>{subject}</span>)}</div><p>{weakSubjectTasks.length ? `${weakSubjectTasks.length} related task${weakSubjectTasks.length === 1 ? '' : 's'} pending.` : 'Review these subjects in your next session.'}</p></> : <p className="muted">Add weak subjects in Profile to get a focused study reminder.</p>}
-          </section>
-
-          <section className="card notification-card notification-planning">
-            <div className="notification-card-title"><span className="notification-symbol">🔔</span><div><h2>Upcoming & Due Tasks</h2><span className="muted">Your next actions</span></div></div>
-            {dueTasks.length > 0 && <p><strong>{dueTasks.length} due study task{dueTasks.length === 1 ? '' : 's'}.</strong></p>}
-            {upcomingNotificationTasks.map((task) => <div className="notification-row" key={task.id}><span>{task.name}</span><span className="badge">{formatShortDate(task.date)}</span></div>)}
-            {dueTasks.length === 0 && upcomingNotificationTasks.length === 0 && <p className="muted">No upcoming tasks. Keep planning ahead.</p>}
-          </section>
-
-          <section className="card notification-card notification-missed">
-            <div className="notification-card-title"><span className="notification-symbol">⚠️</span><div><h2>Missed Tasks</h2><span className="muted">Tasks that need your attention</span></div></div>
-            {missedTasks.length > 0 ? <><p><strong>{missedTasks.length} overdue task{missedTasks.length === 1 ? '' : 's'}.</strong> Reschedule or complete them to stay on track.</p>{missedTasks.map((task) => <div className="notification-row" key={task.id}><span>{task.name}</span><span className="badge">{formatShortDate(task.date)}</span></div>)}</> : <p className="muted">You have no missed tasks. Nice work staying on schedule.</p>}
+            {weakSubjects.length > 0 ? <><div className="focus-subject-list">{weakSubjects.map((subject) => <span className="focus-subject" key={subject}>{subject}</span>)}</div><p>{weakSubjectTasks.length ? `${weakSubjectTasks.length} related task${weakSubjectTasks.length === 1 ? '' : 's'} pending.` : 'Review these subjects in your next session.'}</p><button className="secondary-btn notification-action-btn" onClick={() => navigateToPage('planner')}>View Planner</button></> : <><p className="muted">Add weak subjects in Profile to get focused recommendations.</p><button className="secondary-btn notification-action-btn" onClick={() => navigateToPage('profile')}>Open Profile</button></>}
           </section>
 
           <section className="card notification-card notification-exam">
             <div className="notification-card-title"><span className="notification-symbol">🗓️</span><div><h2>Upcoming Exam</h2><span className="muted">Stay prepared</span></div></div>
-            {examDaysRemaining !== null && examDaysRemaining >= 0 ? <p><strong>Exam in {examDaysRemaining} day{examDaysRemaining === 1 ? '' : 's'}.</strong> Review your plan and keep going.</p> : <p className="muted">Add an exam date in Profile to see your countdown.</p>}
+            {examDaysRemaining !== null && examDaysRemaining >= 0 ? <><p><strong>Exam in {examDaysRemaining} day{examDaysRemaining === 1 ? '' : 's'}.</strong> Review your plan and keep going.</p><button className="secondary-btn notification-action-btn" onClick={() => navigateToPage('profile')}>View Profile</button></> : <><p className="muted">Add an exam date in Profile to see your countdown.</p><button className="secondary-btn notification-action-btn" onClick={() => navigateToPage('profile')}>Set Exam Date</button></>}
           </section>
 
           <section className="card notification-card notification-streak">
@@ -2373,6 +2571,7 @@ function App() {
           <section className="card notification-card notification-quiz">
             <div className="notification-card-title"><span className="notification-symbol">📝</span><div><h2>Quiz Insight</h2><span className="muted">Turn practice into progress</span></div></div>
             {latestQuiz ? <p>{latestQuizNeedsReview ? `Your latest quiz score was ${latestQuiz.accuracy}%. Review this subject before your next attempt.` : `Your latest quiz score was ${latestQuiz.accuracy}%. Keep practicing to build confidence.`}</p> : <p className="muted">Take your first quiz to receive a personalized review reminder.</p>}
+            <button className="secondary-btn notification-action-btn" onClick={() => navigateToPage('quiz')}>Take Quiz</button>
           </section>
 
           <section className="card notification-card notification-motivation">
@@ -2384,20 +2583,52 @@ function App() {
     );
   };
 
-  const renderStreak = () => (
-    <div className="page utility-page streak-page">
-      <div className="utility-page-header">
-        <button className="icon-btn utility-back-btn" onClick={closeUtilityPage} aria-label="Go back" title="Go back">←</button>
-        <div><span className="eyebrow">DAILY MOMENTUM</span><h1>Study Streak</h1></div>
+  const renderStreak = () => {
+    const streakDays = getStudyTrend(sessions);
+    const qualifyingDates = [...new Set(sessions.filter((session) => {
+      const seconds = Number(session.durationSeconds) || (Number(session.durationMinutes) || 0) * 60;
+      return session.dateKey && seconds >= 600;
+    }).map((session) => session.dateKey))].sort();
+    let bestStreak = 0;
+    let currentStreak = 0;
+    let previousDate = null;
+    qualifyingDates.forEach((dateKey) => {
+      const date = new Date(`${dateKey}T00:00:00`);
+      const gap = previousDate ? Math.floor((date - previousDate) / (1000 * 60 * 60 * 24)) : null;
+      currentStreak = gap === 1 || gap === 2 ? currentStreak + 1 : 1;
+      bestStreak = Math.max(bestStreak, currentStreak);
+      previousDate = date;
+    });
+
+    return (
+      <div className="page utility-page streak-page">
+        <div className="utility-page-header">
+          <button className="icon-btn utility-back-btn" onClick={closeUtilityPage} aria-label="Go back" title="Go back">←</button>
+          <div><span className="eyebrow">DAILY MOMENTUM</span><h1>Study Streak</h1></div>
+        </div>
+        <div className="card streak-detail-card">
+          <div className="streak-detail-layout">
+            <div className="streak-detail-ring" style={{ '--streak-progress': `${streakProgress * 3.6}deg` }}><strong>{Math.min(10, Math.floor(todaysMinutes))}/10</strong><span>minutes today</span></div>
+            <div className="streak-detail-copy">
+              <span className="section-kicker">CURRENT STREAK</span>
+              <h2>{streak > 0 ? `${streak} day${streak === 1 ? '' : 's'} strong` : 'Start your streak'}</h2>
+              <p className="muted">{streak >= 1 ? 'Keep showing up with one focused study session today.' : 'Your streak starts with one focused 10-minute session.'}</p>
+              <button className="primary-btn" onClick={() => { setTimerFinished(false); setTimerRunning(true); closeUtilityPage(); }}>Start Study Session</button>
+            </div>
+          </div>
+          <div className="streak-metrics">
+            <div><span className="muted">Current streak</span><strong>{streak} day{streak === 1 ? '' : 's'}</strong></div>
+            <div><span className="muted">Best streak</span><strong>{bestStreak} day{bestStreak === 1 ? '' : 's'}</strong></div>
+            <div><span className="muted">Qualifying sessions</span><strong>{qualifyingDates.length}</strong></div>
+          </div>
+          <div className="streak-week-panel">
+            <div className="section-header"><h3>Last 7 days</h3><span className="muted">10 min unlocks a day</span></div>
+            <div className="streak-week-grid">{streakDays.map((day) => <div className={`streak-day ${day.minutes >= 10 ? 'complete' : ''}`} key={day.key} title={`${day.label}: ${Math.round(day.minutes)} minutes`}><span>{day.label}</span><strong>{day.minutes >= 10 ? '✓' : day.minutes ? Math.round(day.minutes) : '·'}</strong></div>)}</div>
+          </div>
+        </div>
       </div>
-      <div className="card streak-detail-card">
-        <div className="streak-detail-ring" style={{ '--streak-progress': `${streakProgress * 3.6}deg` }}><strong>{Math.min(10, Math.floor(todaysMinutes))}/10</strong><span>minutes</span></div>
-        <h2>{streak > 0 ? `${streak} day${streak === 1 ? '' : 's'} strong` : 'Start your streak'}</h2>
-        <p className="muted">{streak >= 1 ? 'Keep showing up with one focused study session today.' : 'Study for 10 focused minutes today to begin your streak.'}</p>
-        <button className="primary-btn" onClick={closeUtilityPage}>Continue</button>
-      </div>
-    </div>
-  );
+    );
+  };
 
   const renderContent = () => {
     switch (page) {
@@ -2409,6 +2640,7 @@ function App() {
       case 'search': return renderSearch();
       case 'support': return renderSupport();
       case 'about': return renderAbout();
+      case 'whats-new': return renderWhatsNew();
       case 'terms': return renderTerms();
       case 'privacy': return renderPrivacy();
       case 'notifications': return renderNotifications();
@@ -2417,26 +2649,35 @@ function App() {
     }
   };
 
+  const mobileNavItems = navItems.filter((item) => !['settings', 'about'].includes(item.id));
+
   const renderOnboarding = () => (
-    <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 20 }}>
-      <div className="card" style={{ maxWidth: 760, width: '100%', padding: 22 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+    <div className="onboarding-screen">
+      <div className="onboarding-shell">
+        <div className="onboarding-header">
           <div className="brand"><EduMeLogo /> <span>EduMe</span></div>
-          <span className="badge">Onboarding</span>
+          <span className="badge">Study workspace</span>
         </div>
-        <div style={{ display: 'grid', gap: 16 }}>
+        <div className="onboarding-intro">
+          <span className="eyebrow">A CALMER WAY TO PREPARE</span>
+          <h1>Build a study rhythm that lasts.</h1>
+          <p>Plan your days, focus without distractions, and see your preparation become measurable.</p>
+        </div>
+        <div className="onboarding-feature-grid">
           {[
-            { title: 'Welcome to EduMe 👋', text: 'Start with your Profile: add your exam, class, and weak subjects.' },
-            { title: '📚 Plan your day', text: 'Open Planner, choose a date, and press Add Task for each study topic.' },
-            { title: '⏱️ Study with focus', text: 'Press Start Studying on Home, choose a duration, and finish the session.' },
-            { title: '📝 Practise with Quiz', text: 'Open Quiz, select your exam and subject, then answer each question.' },
-            { title: '📊 Check your progress', text: 'Open Progress to see study time, streaks, XP, goals, and quiz accuracy.' },
-          ].map((slide, index) => (
-            <div key={index} className="card" style={{ padding: 18 }}>
-              <h3 style={{ margin: '0 0 8px' }}>{slide.title}</h3>
-              <p style={{ margin: 0, color: 'var(--text-soft)' }}>{slide.text}</p>
+            { icon: '👤', title: 'Personalize', text: 'Set your exam, date, class, and focus areas.' },
+            { icon: '📚', title: 'Plan', text: 'Turn your study goals into clear daily tasks.' },
+            { icon: '⏱️', title: 'Focus', text: 'Use focused sessions to build consistent momentum.' },
+            { icon: '📊', title: 'Improve', text: 'Track progress, quizzes, goals, streaks, and XP.' },
+          ].map((feature) => (
+            <div key={feature.title} className="onboarding-feature">
+              <span className="onboarding-feature-icon" aria-hidden="true">{feature.icon}</span>
+              <div><h3>{feature.title}</h3><p>{feature.text}</p></div>
             </div>
           ))}
+        </div>
+        <div className="onboarding-next-step">
+          <div><span className="section-kicker">FIRST STEP</span><strong>Complete your Profile</strong><p>Add your exam and study preferences after entering EduMe.</p></div>
           <button
             className="primary-btn"
             onClick={() => {
@@ -2456,7 +2697,16 @@ function App() {
       {showOnboarding ? renderOnboarding() : (
         <div className="app-shell">
           <header className="topbar">
-            <div className="brand"><EduMeLogo /> <span>EduMe</span></div>
+            <button
+              type="button"
+              className="brand brand-button mobile-brand-button"
+              onClick={() => toggleMobileUtilityPage('about')}
+              aria-label={page === 'about' ? 'Back to previous page' : 'Open About page'}
+              title={page === 'about' ? 'Back' : 'About'}
+            >
+              <EduMeLogo /> <span>EduMe</span>
+            </button>
+            <div className="brand desktop-brand"><EduMeLogo /> <span>EduMe</span></div>
             <div className="topbar-actions">
               <button className="icon-btn utility-header-btn streak-header-btn" onClick={() => openUtilityPage('streak')} aria-label={`Study streak: ${streak} days`} title={`Study streak: ${streak} days`}>
                 <span aria-hidden="true" className="streak-header-icon">🔥</span><strong className="streak-header-count">{streak}</strong>
@@ -2465,12 +2715,13 @@ function App() {
                 <span aria-hidden="true">🔔</span>
               </button>
               <button
-                className="icon-btn mobile-menu-toggle"
-                onClick={() => setMobileMenuOpen((current) => !current)}
-                aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
-                aria-expanded={mobileMenuOpen}
+                className="icon-btn mobile-menu-toggle mobile-settings-toggle"
+                onClick={() => toggleMobileUtilityPage('settings')}
+                aria-label={page === 'settings' ? 'Back to previous page' : 'Open settings'}
+                aria-expanded={page === 'settings'}
+                title={page === 'settings' ? 'Back' : 'Settings'}
               >
-                <span className="menu-glyph" aria-hidden="true"><span /><span /><span /></span>
+                <span className="settings-glyph" aria-hidden="true">⚙️</span>
               </button>
               <button
                 className="icon-btn theme-toggle"
@@ -2478,7 +2729,7 @@ function App() {
                 aria-label={`Theme: ${theme}. Change theme`}
                 title={`Theme: ${theme}`}
               >
-                {theme === 'dark' ? '🌙' : theme === 'oak' ? '🌳' : '☀️'}
+                {theme === 'dark' ? '🌙' : theme === 'oak' ? '🌳' : theme === 'system' ? '🌓' : '☀️'}
               </button>
             </div>
           </header>
@@ -2526,7 +2777,7 @@ function App() {
 
           <div className={`mobile-menu-backdrop ${mobileMenuOpen ? 'open' : ''}`} onClick={() => setMobileMenuOpen(false)} />
           <nav className={`mobile-nav ${mobileMenuOpen ? 'open' : ''}`} aria-label="Mobile navigation">
-            {navItems.map((item) => (
+            {mobileNavItems.map((item) => (
               <button
                 key={item.id}
                 className={selectedNav === item.id ? 'nav-item active' : 'nav-item'}
@@ -2637,8 +2888,7 @@ function App() {
               <div ref={focusModeRef} className={`modal focus-mode-modal ${timerLandscape ? 'timer-landscape' : ''}`} style={{ background: 'var(--card)', padding: 28 }} onClick={(e) => e.stopPropagation()}>
                 <div className="section-header">
                   <button className="icon-btn focus-back-btn" onClick={closeFocusMode} aria-label="Back to Home" title="Back to Home">←</button>
-                  <h2>Focus Mode</h2>
-                  <button className="ghost-btn" onClick={closeFocusMode}>Exit Focus Mode</button>
+                  <span className="focus-mode-label">Focus Mode</span>
                 </div>
                 <div className="timer-display" style={{ margin: '18px 0' }}>{formatTimeDisplay(timerSeconds)}</div>
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
@@ -2660,17 +2910,17 @@ function App() {
               <div className="modal celebration-modal" onClick={(event) => event.stopPropagation()}>
                 <div className="celebration-icon">🎉</div>
                 <span className="section-kicker">FOCUS SESSION COMPLETE</span>
-                <h2>Excellent work!</h2>
-                <p className="muted">You showed up and made real progress today.</p>
+                <h2>Session complete</h2>
+                <p className="muted">Your focused study time has been added to today&apos;s progress.</p>
                 <div className="celebration-stats">
-                  <div><strong>{formatTimeDisplay(sessionSummary.durationMinutes * 60)}</strong><span>study time</span></div>
-                  <div><strong>+{sessionSummary.xpEarned} XP</strong><span>earned</span></div>
-                  <div><strong>Level {sessionSummary.level}</strong><span>current level</span></div>
+                  <div><strong>{formatTimeDisplay(sessionSummary.durationMinutes * 60)}</strong><span>Focus time</span></div>
+                  <div><strong>+{sessionSummary.xpEarned} XP</strong><span>Earned</span></div>
+                  <div><strong>Level {sessionSummary.level}</strong><span>Current level</span></div>
                 </div>
                 <div className="celebration-badges">
-                  <strong>Badge progress</strong>
+                  <strong>Achievement progress</strong>
                   <div className="badge-grid">
-                    {sessionSummary.badges.map((badge) => (
+                    {[...sessionSummary.badges.filter((badge) => badge.unlocked), ...sessionSummary.badges.filter((badge) => !badge.unlocked)].slice(0, 5).map((badge) => (
                       <div key={badge.id} className={`achievement ${badge.unlocked ? 'achievement-unlocked' : ''}`}>
                         <div className="achievement-icon">{badge.name.slice(0, 2)}</div>
                         <div><strong>{badge.name.slice(2)}</strong><span>{badge.unlocked ? 'Unlocked' : 'Keep going'}</span></div>
@@ -2678,7 +2928,7 @@ function App() {
                     ))}
                   </div>
                 </div>
-                <button className="primary-btn celebration-close" onClick={() => setSessionSummary(null)}>Keep going</button>
+                <button className="primary-btn celebration-close" onClick={() => setSessionSummary(null)}>Continue</button>
               </div>
             </div>
           )}
