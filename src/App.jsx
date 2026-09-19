@@ -16,7 +16,11 @@ const STORAGE_KEYS = {
   xp: 'edume_xp',
   homeStartDismissed: 'edume_home_start_dismissed',
   installPromptDismissedAt: 'edume_install_prompt_dismissed_at',
+  referralCode: 'edume_referral_code',
+  lastSeenVersion: 'edume_last_seen_version',
 };
+
+const APP_VERSION = '1.1';
 
 const defaultProfile = {
   name: '',
@@ -32,7 +36,7 @@ const defaultSettings = {
   studyReminder: false,
   notificationReminder: false,
   soundEffects: false,
-  theme: 'system',
+  theme: 'light',
 };
 
 const navItems = [
@@ -68,6 +72,18 @@ const quizExamKeys = {
 };
 
 const SUPPORT_EMAIL = 'sbmplayerzofficial@gmail.com';
+
+function getReferralCode() {
+  const storedCode = readStorage(STORAGE_KEYS.referralCode, '');
+  if (storedCode) return storedCode;
+  const namePart = String(readStorage(STORAGE_KEYS.profile, defaultProfile)?.name || 'STUDENT')
+    .replace(/[^a-z0-9]/gi, '')
+    .slice(0, 5)
+    .toUpperCase() || 'STUDENT';
+  const code = `${namePart}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
+  writeStorage(STORAGE_KEYS.referralCode, code);
+  return code;
+}
 const SUPPORT_MAILTO_URL = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('EduMe Support Request')}&body=${encodeURIComponent('Hello EduMe Support,\n\n')}`;
 
 const QUIZ_COMPLETION_XP = 10;
@@ -108,6 +124,17 @@ function writeStorage(key, value) {
   } catch {
     return false;
   }
+}
+
+function getInitialUpdateNotice() {
+  const savedVersion = readStorage(STORAGE_KEYS.lastSeenVersion, '');
+  if (savedVersion === APP_VERSION) return false;
+  const isExistingUser = Boolean(readStorage(STORAGE_KEYS.onboarding, false));
+  if (!isExistingUser) {
+    writeStorage(STORAGE_KEYS.lastSeenVersion, APP_VERSION);
+    return false;
+  }
+  return true;
 }
 
 function removeStorage(key) {
@@ -293,13 +320,13 @@ function calculateStreak(tasks, sessions) {
   const today = new Date(`${getCurrentDateKey()}T00:00:00`);
   const latestDate = new Date(`${latestQualifyingDate}T00:00:00`);
   const daysSinceStudy = Math.floor((today - latestDate) / (1000 * 60 * 60 * 24));
-  if (daysSinceStudy > 3) return 0;
+  if (daysSinceStudy > 1) return 0;
 
   let streak = 0;
   let previousDate = null;
   for (const dateKey of [...qualifyingDays].sort().reverse()) {
     const date = new Date(`${dateKey}T00:00:00`);
-    if (previousDate && Math.floor((previousDate - date) / (1000 * 60 * 60 * 24)) > 2) break;
+    if (previousDate && Math.floor((previousDate - date) / (1000 * 60 * 60 * 24)) > 1) break;
     streak += 1;
     previousDate = date;
   }
@@ -469,7 +496,7 @@ function App() {
   const [sessions, setSessions] = useState(() => readStorage(STORAGE_KEYS.sessions, []));
   const [settings, setSettings] = useState(getInitialSettings);
   const [theme, setTheme] = useState(() => {
-    const storedTheme = readStorage(STORAGE_KEYS.theme, 'system');
+    const storedTheme = readStorage(STORAGE_KEYS.theme, 'light');
     if (storedTheme === 'aurora' || storedTheme === 'solstice') return 'system';
     return storedTheme === 'autumn' ? 'oak' : storedTheme;
   });
@@ -500,6 +527,8 @@ function App() {
   const [showInstallHelp, setShowInstallHelp] = useState(false);
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
   const [showHomeStart, setShowHomeStart] = useState(() => !readStorage(STORAGE_KEYS.homeStartDismissed, false));
+  const [showUpdateNotice, setShowUpdateNotice] = useState(getInitialUpdateNotice);
+  const [referralCode] = useState(getReferralCode);
   const [sessionSummary, setSessionSummary] = useState(null);
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [timerRunning, setTimerRunning] = useState(false);
@@ -810,6 +839,16 @@ function App() {
   }, []);
 
   const triggerToast = (message) => setToast(message);
+  const dismissUpdateNotice = () => {
+    writeStorage(STORAGE_KEYS.lastSeenVersion, APP_VERSION);
+    setShowUpdateNotice(false);
+  };
+
+  const openWhatsNewFromNotice = () => {
+    dismissUpdateNotice();
+    openUtilityPage('whats-new');
+  };
+
   const playSound = (type = 'tap') => {
     if (settings.soundEffects) playFeedbackTone(type);
   };
@@ -873,6 +912,37 @@ function App() {
     } catch {
       triggerToast('Copy is unavailable in this browser.');
     }
+  };
+
+  const getReferralLink = () => `${window.location.origin}${window.location.pathname}?ref=${encodeURIComponent(referralCode)}`;
+
+  const copyReferralLink = async () => {
+    try {
+      await navigator.clipboard.writeText(getReferralLink());
+      triggerToast('✓ Invite link copied');
+    } catch {
+      triggerToast('Copy is unavailable in this browser.');
+    }
+  };
+
+  const shareReferralLink = async () => {
+    const link = getReferralLink();
+    const shareData = { title: 'Study smarter with EduMe', text: 'I am using EduMe to plan my studies and practice quizzes. Try it too:', url: link };
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+        triggerToast('✓ Invite shared');
+      } catch (error) {
+        if (error.name !== 'AbortError') triggerToast('Sharing is unavailable right now.');
+      }
+      return;
+    }
+    await copyReferralLink();
+  };
+
+  const shareOnWhatsApp = () => {
+    const message = `I am using EduMe to plan my studies and practice quizzes. Try it too: ${getReferralLink()}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
   };
 
   const requestNotificationPermission = async () => {
@@ -1310,7 +1380,7 @@ function App() {
     const isNewUser = !tasks.length && !sessions.length && !goals.length && !quizHistory.length;
 
     return (
-      <div className="page">
+      <div className="page home-page">
       <div className="section-header home-welcome">
         <div>
           <p className="muted" style={{ margin: 0, fontWeight: 700 }}>Welcome</p>
@@ -1377,7 +1447,7 @@ function App() {
           {examDaysRemaining === null ? (
             <div className="empty-state">Add an exam date in Profile to see the countdown here.</div>
           ) : (
-            <div className="countdown-value"><strong>{Math.max(0, examDaysRemaining)}</strong><span>{examDaysRemaining < 0 ? 'days passed' : examDaysRemaining === 1 ? 'day left' : 'days left'}</span></div>
+            <div className="countdown-value"><strong>{examDaysRemaining < 0 ? Math.abs(examDaysRemaining) : examDaysRemaining}</strong><span>{examDaysRemaining < 0 ? (Math.abs(examDaysRemaining) === 1 ? 'day passed' : 'days passed') : examDaysRemaining === 1 ? 'day left' : 'days left'}</span></div>
           )}
         </div>
       </div>
@@ -1535,7 +1605,6 @@ function App() {
     <div className="page planner-page">
       <div className="section-header">
         <h2>Study Planner</h2>
-        <button className="primary-btn" onClick={() => openPlannerModal()}>Add Task</button>
       </div>
 
       <div className="card inset-panel planner-filters">
@@ -1998,6 +2067,7 @@ function App() {
               <span className="report-pill">⚡ Level {levelInfo.level}</span>
               {profile.targetExam && <span className="report-pill">🎯 {profile.targetExam}</span>}
             </div>
+            <div className="progress-report-actions progress-hero-report-actions"><span className="progress-report-label">Download report</span><button className="primary-btn" onClick={() => downloadReport('weekly')}>Weekly</button><button className="secondary-btn" onClick={() => downloadReport('monthly')}>Monthly</button></div>
           </div>
           <div className="overall-score">
             <div className="score-ring" style={{ '--score': `${overallProgress * 3.6}deg` }}><strong>{overallProgress}%</strong></div>
@@ -2082,10 +2152,6 @@ function App() {
           {orderedBadges.length > 4 && <button className="ghost-btn progress-inline-toggle" onClick={() => setShowProgressBadges((current) => !current)}>{showProgressBadges ? 'Show fewer badges' : `View all badges (${orderedBadges.length})`}</button>}
         </div>
 
-        <div className="card inset-panel report-download-panel">
-          <div className="section-header"><div><h3>Reports</h3><p className="muted">Export your study summary when you need it.</p></div></div>
-          <div className="progress-report-actions"><button className="primary-btn" onClick={() => downloadReport('weekly')}>↗ Download Weekly Report</button><button className="secondary-btn" onClick={() => downloadReport('monthly')}>↗ Download Monthly Report</button></div>
-        </div>
       </div>
     );
   };
@@ -2360,17 +2426,14 @@ function App() {
 
   const renderAbout = () => (
     <div className="page">
-      <div className="card inset-panel">
-        <div className="section-header"><h2>About EduMe</h2></div>
+      <div className="card inset-panel about-panel">
+        <div className="about-page-heading"><div><span className="section-kicker">ABOUT THE APP</span><h2>About EduMe</h2><p className="muted">A focused workspace for better study habits.</p></div><div className="about-version-badge">v1.1</div></div>
         <div style={{ display: 'grid', gap: 16 }}>
           <div className="brand"><EduMeLogo /> <span className="highlight-text">EduMe</span></div>
-          <p className="muted" style={{ margin: 0 }}>A focused workspace for better study habits.</p>
-          <p style={{ margin: 0 }}>EduMe is a student-focused study planning and productivity application built to make everyday learning more organized, measurable, and consistent. It brings study planning, task management, goals, focus timing, progress tracking, quizzes, reminders, streaks, and achievement insights together in one simple workspace.</p>
-          <p style={{ margin: 0 }}>With personalized exam and subject settings, weekly and monthly reports, theme preferences, and offline-friendly browser storage, EduMe helps students understand their study patterns and take the next useful step with confidence. EduMe is designed for personal organization and study support, so students can spend less time managing their routine and more time learning.</p>
           <div className="card info-card" style={{ padding: 16 }}>
             <strong className="highlight-text">App Information</strong>
             <ul style={{ margin: '10px 0 0', paddingLeft: 18, lineHeight: 1.8 }}>
-              <li>App Name: <span className="highlight-text">EduMe</span></li>
+              <li>App Name: <button className="about-app-name-link" onClick={() => openUtilityPage('about-details')} aria-label="Open detailed information about EduMe">EduMe</button></li>
               <li>Version: <button className="version-link" onClick={() => openUtilityPage('whats-new')}>EduMe v1.1</button></li>
               <li>Type: Student Study & Productivity App</li>
               <li>Designed And Developed by <span className="highlight-text">SBM</span></li>
@@ -2379,6 +2442,10 @@ function App() {
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button className="secondary-btn" onClick={() => openUtilityPage('terms')}>Terms & Conditions</button>
             <button className="secondary-btn" onClick={() => openUtilityPage('privacy')}>Privacy Policy</button>
+          </div>
+          <div className="about-referral-section">
+            <div className="about-referral-copy"><span className="section-kicker">SHARE EDUME</span><h3>Study better together</h3><p className="muted">Invite a friend to build a calmer, more consistent study routine.</p><div className="referral-code-row"><span className="referral-code-label">Your invite code</span><span className="referral-code">{referralCode}</span></div></div>
+            <div className="about-referral-actions"><button className="primary-btn" type="button" onClick={shareReferralLink}><span className="share-label-desktop">Share invite</span><span className="share-label-mobile">Share via apps</span></button><button className="secondary-btn" type="button" onClick={copyReferralLink}>Copy link</button><button className="ghost-btn" type="button" onClick={shareOnWhatsApp}>WhatsApp</button></div>
           </div>
           <div className="about-support-section">
             <div className="section-header"><div><span className="section-kicker">NEED A HAND?</span><h3>Support</h3></div></div>
@@ -2404,6 +2471,34 @@ function App() {
           </div>
         </div>
       </div>
+    </div>
+  );
+
+  const renderAboutDetails = () => (
+    <div className="page utility-page about-details-page">
+      <div className="utility-page-header">
+        <button className="icon-btn utility-back-btn" onClick={closeUtilityPage} aria-label="Go back" title="Go back">←</button>
+        <div><span className="eyebrow">THE EDUME EXPERIENCE</span><h1>About EduMe</h1></div>
+      </div>
+      <div className="card about-details-hero">
+        <div className="brand"><EduMeLogo /> <span className="highlight-text">EduMe</span></div>
+        <span className="section-kicker">A FOCUSED STUDY WORKSPACE</span>
+        <h2>Everything you need to build a steady study rhythm.</h2>
+        <p className="muted">EduMe brings planning, focus, practice, and progress into one calm workspace designed for everyday learning.</p>
+      </div>
+      <div className="about-feature-grid">
+        {[
+          ['📋', 'Plan your day', 'Create tasks, set priorities, manage goals, and keep your study routine clear.'],
+          ['⏱️', 'Focus with intention', 'Use the focus timer to record meaningful study sessions and build consistency.'],
+          ['📝', 'Practice smarter', 'Take exam-focused quizzes, review your performance, and identify subjects that need attention.'],
+          ['📊', 'Understand your progress', 'See study time, task completion, quiz accuracy, XP, levels, streaks, and badges in one view.'],
+          ['🎯', 'Personalize your path', 'Set your exam, date, class, daily target, and weak subjects for a more relevant experience.'],
+          ['🔒', 'Keep your routine close', 'Your study data is stored locally in the browser for an offline-friendly personal workspace.'],
+        ].map(([icon, title, text]) => (
+          <div className="card about-feature-item" key={title}><span className="about-feature-icon" aria-hidden="true">{icon}</span><div><h3>{title}</h3><p className="muted">{text}</p></div></div>
+        ))}
+      </div>
+      <div className="card about-details-footer"><span className="section-kicker">BUILT FOR CONSISTENCY</span><h3>Small sessions become visible progress.</h3><p className="muted">EduMe is a personal organization and study-support tool. Use it to make your next useful step easier to see and easier to take.</p></div>
     </div>
   );
 
@@ -2595,7 +2690,7 @@ function App() {
     qualifyingDates.forEach((dateKey) => {
       const date = new Date(`${dateKey}T00:00:00`);
       const gap = previousDate ? Math.floor((date - previousDate) / (1000 * 60 * 60 * 24)) : null;
-      currentStreak = gap === 1 || gap === 2 ? currentStreak + 1 : 1;
+      currentStreak = gap === 1 ? currentStreak + 1 : 1;
       bestStreak = Math.max(bestStreak, currentStreak);
       previousDate = date;
     });
@@ -2640,6 +2735,7 @@ function App() {
       case 'search': return renderSearch();
       case 'support': return renderSupport();
       case 'about': return renderAbout();
+      case 'about-details': return renderAboutDetails();
       case 'whats-new': return renderWhatsNew();
       case 'terms': return renderTerms();
       case 'privacy': return renderPrivacy();
@@ -2753,6 +2849,13 @@ function App() {
             </aside>
 
             <main className="app-main">
+              {showUpdateNotice && (
+                <div className="update-notice" role="status">
+                  <div className="update-notice-icon" aria-hidden="true">✦</div>
+                  <div className="update-notice-copy"><span className="section-kicker">EDUME V1.1</span><strong>A more focused study workspace is here.</strong><p>See the latest improvements and updates.</p></div>
+                  <div className="update-notice-actions"><button className="primary-btn" onClick={openWhatsNewFromNotice}>See what&apos;s new</button><button className="ghost-btn" onClick={dismissUpdateNotice}>Later</button></div>
+                </div>
+              )}
               {showSearch && (
                 <div className="card inset-panel">
                   <div className="section-header">
