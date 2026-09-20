@@ -526,6 +526,8 @@ function App() {
   const [deferredInstallPrompt, setDeferredInstallPrompt] = useState(null);
   const [showInstallHelp, setShowInstallHelp] = useState(false);
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
+  const [developerModalOpen, setDeveloperModalOpen] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [showHomeStart, setShowHomeStart] = useState(() => !readStorage(STORAGE_KEYS.homeStartDismissed, false));
   const [showUpdateNotice, setShowUpdateNotice] = useState(getInitialUpdateNotice);
   const [referralCode] = useState(getReferralCode);
@@ -533,6 +535,7 @@ function App() {
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [timerRunning, setTimerRunning] = useState(false);
   const [timerFinished, setTimerFinished] = useState(false);
+  const [focusModeOpen, setFocusModeOpen] = useState(false);
   const [fullScreen, setFullScreen] = useState(false);
   const [timerLandscape, setTimerLandscape] = useState(false);
   const [timerOnlyMode, setTimerOnlyMode] = useState(false);
@@ -617,6 +620,14 @@ function App() {
   useEffect(() => {
     writeStorage(STORAGE_KEYS.profile, profile);
   }, [profile]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 767px)');
+    const updateViewport = () => setIsMobileViewport(mediaQuery.matches);
+    updateViewport();
+    mediaQuery.addEventListener('change', updateViewport);
+    return () => mediaQuery.removeEventListener('change', updateViewport);
+  }, []);
 
   useEffect(() => {
     if (!profile.targetExam || quizExam) return;
@@ -746,6 +757,7 @@ function App() {
     const handleEsc = (event) => {
       if (event.key === 'Escape') {
         closeFocusMode();
+        setDeveloperModalOpen(false);
         setPlannerModal((current) => ({ ...current, open: false }));
         setGoalModal((current) => ({ ...current, open: false }));
         setDeleteTaskId(null);
@@ -865,6 +877,7 @@ function App() {
   };
 
   const closeFocusMode = async () => {
+    setFocusModeOpen(false);
     setFullScreen(false);
     setTimerLandscape(false);
     setTimerOnlyMode(false);
@@ -876,7 +889,15 @@ function App() {
     }
   };
 
+  const returnFromFullscreenToFocusMode = () => {
+    setFullScreen(false);
+    setTimerLandscape(false);
+    setTimerOnlyMode(false);
+    setFocusModeOpen(true);
+  };
+
   const openFocusMode = async () => {
+    setFocusModeOpen(true);
     setFullScreen(true);
     setTimerLandscape(false);
     setTimerOnlyMode(false);
@@ -949,11 +970,6 @@ function App() {
       return;
     }
     await copyReferralLink();
-  };
-
-  const shareOnWhatsApp = () => {
-    const message = `I am using EduMe to plan my studies and practice quizzes. Try it too: ${getReferralLink()}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
   };
 
   const requestNotificationPermission = async () => {
@@ -2439,15 +2455,14 @@ function App() {
     <div className="page">
       <div className="card inset-panel about-panel">
         <div className="about-page-heading"><div><span className="section-kicker">ABOUT THE APP</span><h2>About EduMe</h2><p className="muted">A focused workspace for better study habits.</p></div><div className="about-version-badge">v1.1</div></div>
-        <div style={{ display: 'grid', gap: 16 }}>
-          <div className="brand"><EduMeLogo /> <span className="highlight-text">EduMe</span></div>
+          <div style={{ display: 'grid', gap: 16 }}>
           <div className="card info-card" style={{ padding: 16 }}>
             <strong className="highlight-text">App Information</strong>
             <ul style={{ margin: '10px 0 0', paddingLeft: 18, lineHeight: 1.8 }}>
-              <li>App Name: <button className="about-app-name-link" onClick={() => openUtilityPage('about-details')} aria-label="Open detailed information about EduMe">EduMe</button></li>
-              <li>Version: <button className="version-link" onClick={() => openUtilityPage('whats-new')}>EduMe v1.1</button></li>
-              <li>Type: Student Study & Productivity App</li>
-              <li>Designed And Developed by <span className="highlight-text">SBM</span></li>
+              <li>App: <button className="about-app-name-link" onClick={() => openUtilityPage('about-details')} aria-label="Open detailed information about EduMe">EduMe</button></li>
+              <li>Version: <button className="version-link" onClick={() => openUtilityPage('whats-new')}>v1.1</button></li>
+              <li>Type: Student Study App</li>
+              <li>Designed and developed by <button className="developer-link about-developer-link" onClick={() => setDeveloperModalOpen(true)}>Shiv Bibhuti Mishra</button></li>
             </ul>
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -2456,7 +2471,7 @@ function App() {
           </div>
           <div className="about-referral-section">
             <div className="about-referral-copy"><span className="section-kicker">SHARE EDUME</span><h3>Study better together</h3><p className="muted">Invite a friend to build a calmer, more consistent study routine.</p><div className="referral-code-row"><span className="referral-code-label">Your invite code</span><span className="referral-code">{referralCode}</span></div></div>
-            <div className="about-referral-actions"><button className="primary-btn" type="button" onClick={shareReferralLink}><span className="share-label-desktop">Share invite</span><span className="share-label-mobile">Share via apps</span></button><button className="secondary-btn" type="button" onClick={copyReferralLink}>Copy link</button><button className="ghost-btn" type="button" onClick={shareOnWhatsApp}>WhatsApp</button></div>
+            <div className="about-referral-actions"><button className="primary-btn" type="button" onClick={shareReferralLink}>{isMobileViewport ? 'Share via apps' : 'Copy invite link'}</button>{isMobileViewport && <button className="secondary-btn" type="button" onClick={copyReferralLink}>Copy link</button>}</div>
           </div>
           <div className="card about-support-section">
             <div className="section-header"><div><span className="section-kicker">NEED A HAND?</span><h3>Support</h3></div></div>
@@ -2480,6 +2495,10 @@ function App() {
               </a>
             </div>
           </div>
+          <footer className="mobile-about-footer" aria-label="EduMe mobile footer">
+            <span>© 2026 EduMe</span>
+            <span>Developed by <button className="developer-link" onClick={() => setDeveloperModalOpen(true)}>Shiv Bibhuti Mishra</button></span>
+          </footer>
         </div>
       </div>
     </div>
@@ -2856,6 +2875,11 @@ function App() {
                     </button>
                   ))}
                 </div>
+
+                <footer className="app-footer" aria-label="EduMe footer">
+                  <div className="app-footer__meta">© 2026 EduMe. All rights reserved.</div>
+                  <div className="app-footer__credit">Developed with ❤️ by <button className="developer-link" onClick={() => setDeveloperModalOpen(true)}>Shiv Bibhuti Mishra</button> | Brand: SBM</div>
+                </footer>
               </div>
             </aside>
 
@@ -2990,9 +3014,31 @@ function App() {
             </div>
           )}
 
+          {focusModeOpen && !fullScreen && !timerOnlyMode && (
+            <div className="modal-backdrop" style={{ background: 'rgba(15,23,42,0.8)' }}>
+              <div ref={focusModeRef} className={`modal focus-mode-modal ${timerLandscape ? 'timer-landscape' : ''}`} style={{ background: 'var(--card)', padding: 28 }} onClick={(e) => e.stopPropagation()}>
+                <div className="section-header">
+                  <button className="icon-btn focus-back-btn" onClick={closeFocusMode} aria-label="Back to Home" title="Back to Home">←</button>
+                  <span className="focus-mode-label">Focus Mode</span>
+                </div>
+                <div className="timer-display" style={{ margin: '18px 0' }}>{formatTimeDisplay(timerSeconds)}</div>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+                  {!timerRunning ? (
+                    <button className="primary-btn" onClick={() => { playSound('tap'); setTimerFinished(false); setTimerRunning(true); }}>Start</button>
+                  ) : (
+                    <button className="secondary-btn" onClick={() => { playSound('tap'); setTimerRunning(false); }}>Pause</button>
+                  )}
+                  <button className="ghost-btn" onClick={() => { playSound('tap'); setTimerFinished(false); setTimerRunning(true); }}>Resume</button>
+                  <button className="ghost-btn" onClick={openFullScreenMode}>Full Screen</button>
+                  <button className="danger-btn" onClick={handleTimerFinish}>Finish Session</button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {fullScreen && timerOnlyMode && (
             <div className="timer-only-backdrop">
-              <button className="icon-btn timer-only-back-btn" onClick={closeFocusMode} aria-label="Back to Home" title="Back to Home">←</button>
+              <button className="icon-btn timer-only-back-btn" onClick={returnFromFullscreenToFocusMode} aria-label="Back to Focus Mode" title="Back to Focus Mode">←</button>
               <div className="timer-only-display">{formatTimeDisplay(timerSeconds)}</div>
             </div>
           )}
@@ -3001,7 +3047,7 @@ function App() {
             <div className="modal-backdrop" style={{ background: 'rgba(15,23,42,0.8)' }}>
               <div ref={focusModeRef} className={`modal focus-mode-modal ${timerLandscape ? 'timer-landscape' : ''}`} style={{ background: 'var(--card)', padding: 28 }} onClick={(e) => e.stopPropagation()}>
                 <div className="section-header">
-                  <button className="icon-btn focus-back-btn" onClick={closeFocusMode} aria-label="Back to Home" title="Back to Home">←</button>
+                  <button className="icon-btn focus-back-btn" onClick={returnFromFullscreenToFocusMode} aria-label="Back to Focus Mode" title="Back to Focus Mode">←</button>
                   <span className="focus-mode-label">Focus Mode</span>
                 </div>
                 <div className="timer-display" style={{ margin: '18px 0' }}>{formatTimeDisplay(timerSeconds)}</div>
@@ -3040,9 +3086,27 @@ function App() {
                         <div><strong>{badge.name.slice(2)}</strong><span>{badge.unlocked ? 'Unlocked' : 'Keep going'}</span></div>
                       </div>
                     ))}
+
                   </div>
                 </div>
                 <button className="primary-btn celebration-close" onClick={() => setSessionSummary(null)}>Continue</button>
+              </div>
+            </div>
+          )}
+
+          {developerModalOpen && (
+            <div className="modal-backdrop developer-modal-overlay" onClick={() => setDeveloperModalOpen(false)}>
+              <div className="modal developer-modal-card" role="dialog" aria-modal="true" aria-labelledby="developer-modal-title" onClick={(event) => event.stopPropagation()}>
+                <button className="icon-btn developer-modal-close" onClick={() => setDeveloperModalOpen(false)} aria-label="Close developer profile" title="Close">×</button>
+                <img className="developer-modal-avatar" src="/image-1789912580558.jpeg" alt="Shiv Bibhuti Mishra" onError={(event) => { event.currentTarget.src = '/icon-192.png'; }} />
+                <span className="section-kicker">THE CREATOR BEHIND EDUME</span>
+                <h2 id="developer-modal-title">Shiv Bibhuti Mishra</h2>
+                <h3>Full Stack Web Developer &amp; Creator of EduMe</h3>
+                <p className="developer-modal-bio">Building EduMe 🚀 | Student &amp; Developer 📚<br />Learning • Building • Improving ✨<br />Turning ideas into useful projects.</p>
+                <div className="developer-social-links" aria-label="Developer social links">
+                  <a className="primary-btn" href="https://github.com" target="_blank" rel="noreferrer">GitHub ↗</a>
+                  <a className="secondary-btn" href="https://linkedin.com" target="_blank" rel="noreferrer">LinkedIn ↗</a>
+                </div>
               </div>
             </div>
           )}
