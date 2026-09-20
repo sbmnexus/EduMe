@@ -757,6 +757,17 @@ function App() {
   }, []);
 
   useEffect(() => {
+    const htmlRoot = document.documentElement;
+    const bodyRoot = document.body;
+    if (htmlRoot) htmlRoot.classList.toggle('fullscreen-focus-active', fullScreen);
+    if (bodyRoot) bodyRoot.classList.toggle('fullscreen-focus-active', fullScreen);
+    return () => {
+      htmlRoot?.classList.remove('fullscreen-focus-active');
+      bodyRoot?.classList.remove('fullscreen-focus-active');
+    };
+  }, [fullScreen]);
+
+  useEffect(() => {
     const handleFullscreenChange = () => {
       if (!document.fullscreenElement && fullScreen) {
         setFullScreen(false);
@@ -1384,7 +1395,7 @@ function App() {
       <div className="section-header home-welcome">
         <div>
           <p className="muted" style={{ margin: 0, fontWeight: 700 }}>Welcome</p>
-          <h1 className="greeting">{getGreeting()}, {profile.name || 'Student'} 👋</h1>
+          <h1 className="greeting">{getGreeting()}<span className="greeting-comma">,</span> {profile.name || 'Student'} 👋</h1>
           <p style={{ margin: '12px 0 0 0', color: 'var(--text-soft)', fontSize: 14 }}>{motivationalMessage}</p>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
             {profile.targetExam && <span className="badge">Target Exam: {profile.targetExam}</span>}
@@ -2067,7 +2078,7 @@ function App() {
               <span className="report-pill">⚡ Level {levelInfo.level}</span>
               {profile.targetExam && <span className="report-pill">🎯 {profile.targetExam}</span>}
             </div>
-            <div className="progress-report-actions progress-hero-report-actions"><span className="progress-report-label">Download report</span><button className="primary-btn" onClick={() => downloadReport('weekly')}>Weekly</button><button className="secondary-btn" onClick={() => downloadReport('monthly')}>Monthly</button></div>
+            <div className="progress-report-actions progress-hero-report-actions"><span className="progress-report-label">Download report</span><button className="primary-btn report-weekly-btn" onClick={() => downloadReport('weekly')}>Weekly</button><button className="secondary-btn report-monthly-btn" onClick={() => downloadReport('monthly')}>Monthly</button></div>
           </div>
           <div className="overall-score">
             <div className="score-ring" style={{ '--score': `${overallProgress * 3.6}deg` }}><strong>{overallProgress}%</strong></div>
@@ -2318,7 +2329,7 @@ function App() {
             <div class="card">
               <h2>Task &amp; Quiz Performance</h2>
               <div class="grid">
-                <div class="stat"><strong>Task Completion</strong><div>${reportData.taskCompletionRate}%</div><small>${reportData.tasksPending} pending · ${reportData.tasksOverdue} overdue</small></div>
+                <div class="stat"><strong>Task Completion</strong><div>${reportData.taskCompletionRate}%</div><small>${reportData.tasksPending} pending &middot; ${reportData.tasksOverdue} overdue</small></div>
                 <div class="stat"><strong>Quiz Attempts</strong><div>${reportData.quizUnavailable ? `Unavailable for ${reportData.targetExam}` : reportData.quizAttempts || 'No data'}</div></div>
                 <div class="stat"><strong>Quiz Accuracy</strong><div>${reportData.quizUnavailable ? 'Unavailable' : reportData.quizAttempts ? `${reportData.quizAccuracy}%` : 'No data'}</div></div>
                 <div class="stat"><strong>XP Earned</strong><div>${reportData.xp}</div><small>Level ${reportData.level}</small></div>
@@ -2447,7 +2458,7 @@ function App() {
             <div className="about-referral-copy"><span className="section-kicker">SHARE EDUME</span><h3>Study better together</h3><p className="muted">Invite a friend to build a calmer, more consistent study routine.</p><div className="referral-code-row"><span className="referral-code-label">Your invite code</span><span className="referral-code">{referralCode}</span></div></div>
             <div className="about-referral-actions"><button className="primary-btn" type="button" onClick={shareReferralLink}><span className="share-label-desktop">Share invite</span><span className="share-label-mobile">Share via apps</span></button><button className="secondary-btn" type="button" onClick={copyReferralLink}>Copy link</button><button className="ghost-btn" type="button" onClick={shareOnWhatsApp}>WhatsApp</button></div>
           </div>
-          <div className="about-support-section">
+          <div className="card about-support-section">
             <div className="section-header"><div><span className="section-kicker">NEED A HAND?</span><h3>Support</h3></div></div>
             <p className="muted">Get in touch anytime. We're here to help!</p>
             <div className="support-contact-card">
@@ -2980,14 +2991,14 @@ function App() {
           )}
 
           {fullScreen && timerOnlyMode && (
-            <div className="timer-only-backdrop" onClick={closeFocusMode}>
+            <div className="timer-only-backdrop">
               <button className="icon-btn timer-only-back-btn" onClick={closeFocusMode} aria-label="Back to Home" title="Back to Home">←</button>
               <div className="timer-only-display">{formatTimeDisplay(timerSeconds)}</div>
             </div>
           )}
 
           {fullScreen && !timerOnlyMode && (
-            <div className="modal-backdrop" style={{ background: 'rgba(15,23,42,0.8)' }} onClick={closeFocusMode}>
+            <div className="modal-backdrop" style={{ background: 'rgba(15,23,42,0.8)' }}>
               <div ref={focusModeRef} className={`modal focus-mode-modal ${timerLandscape ? 'timer-landscape' : ''}`} style={{ background: 'var(--card)', padding: 28 }} onClick={(e) => e.stopPropagation()}>
                 <div className="section-header">
                   <button className="icon-btn focus-back-btn" onClick={closeFocusMode} aria-label="Back to Home" title="Back to Home">←</button>
