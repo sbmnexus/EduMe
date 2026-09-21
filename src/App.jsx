@@ -2440,7 +2440,7 @@ function App() {
         <div className="grid" style={{ gap: 12 }}>
           <a
             className="secondary-btn"
-            href="https://docs.google.com/forms/d/e/1FAIpQLSdqB36cDFQygtQrQnnmmutrlWfjb1j0tX-Z6Ad2kA4Z2dnqcw/viewform?usp=sharing&ouid=102268797773322480668"
+            href="https://forms.gle/qfbnRmXkoNbwcqgQA"
             target="_blank"
             rel="noreferrer"
           >
@@ -2462,7 +2462,7 @@ function App() {
               <li>App: <button className="about-app-name-link" onClick={() => openUtilityPage('about-details')} aria-label="Open detailed information about EduMe">EduMe</button></li>
               <li>Version: <button className="version-link" onClick={() => openUtilityPage('whats-new')}>v1.1</button></li>
               <li>Type: Student Study App</li>
-              <li>Designed and developed by <button className="developer-link about-developer-link" onClick={() => setDeveloperModalOpen(true)}>Shiv Bibhuti Mishra</button></li>
+              <li>Designed and developed by <button className="developer-link about-developer-link" onClick={() => setDeveloperModalOpen(true)}>SBM</button></li>
             </ul>
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -2486,7 +2486,7 @@ function App() {
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <a
                 className="secondary-btn"
-                href="https://docs.google.com/forms/d/e/1FAIpQLSdqB36cDFQygtQrQnnmmutrlWfjb1j0tX-Z6Ad2kA4Z2dnqcw/viewform?usp=sharing&ouid=102268797773322480668"
+                href="https://forms.gle/qfbnRmXkoNbwcqgQA"
                 target="_blank"
                 rel="noreferrer"
                 style={{ flex: '1 1 auto', minWidth: 'max-content' }}
@@ -2496,8 +2496,8 @@ function App() {
             </div>
           </div>
           <footer className="mobile-about-footer" aria-label="EduMe mobile footer">
-            <span>© 2026 EduMe</span>
-            <span>Developed by <button className="developer-link" onClick={() => setDeveloperModalOpen(true)}>Shiv Bibhuti Mishra</button></span>
+            <span>© 2026 EduMe. All rights reserved.</span>
+            <span>Developed with ❤️ by <button className="developer-link" onClick={() => setDeveloperModalOpen(true)}>Shiv Bibhuti Mishra</button> | Brand: SBM</span>
           </footer>
         </div>
       </div>
@@ -3101,7 +3101,7 @@ function App() {
                 <img className="developer-modal-avatar" src="/image-1789912580558.jpeg" alt="Shiv Bibhuti Mishra" onError={(event) => { event.currentTarget.src = '/icon-192.png'; }} />
                 <span className="section-kicker">THE CREATOR BEHIND EDUME</span>
                 <h2 id="developer-modal-title">Shiv Bibhuti Mishra</h2>
-                <h3>Full Stack Web Developer &amp; Creator of EduMe</h3>
+                <h3>Creator of EduMe | Web Developer</h3>
                 <p className="developer-modal-bio">Building EduMe 🚀 | Student &amp; Developer 📚<br />Learning • Building • Improving ✨<br />Turning ideas into useful projects.</p>
                 <div className="developer-social-links" aria-label="Developer social links">
                   <a className="primary-btn" href="https://github.com" target="_blank" rel="noreferrer">GitHub ↗</a>
