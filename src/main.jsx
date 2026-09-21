@@ -9,6 +9,14 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   </React.StrictMode>,
 );
 
+const bootScreen = document.getElementById('boot-screen');
+if (bootScreen) {
+  window.setTimeout(() => {
+    bootScreen.classList.add('boot-screen-hidden');
+    window.setTimeout(() => bootScreen.remove(), 200);
+  }, 700);
+}
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).catch(() => {

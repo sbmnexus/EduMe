@@ -14,6 +14,7 @@ const STORAGE_KEYS = {
   streak: 'edume_streak',
   quizHistory: 'edume_quiz_history',
   xp: 'edume_xp',
+  activeTimer: 'edume_active_timer',
   homeStartDismissed: 'edume_home_start_dismissed',
   installPromptDismissedAt: 'edume_install_prompt_dismissed_at',
   referralCode: 'edume_referral_code',
@@ -92,7 +93,7 @@ const QUIZ_CORRECT_ANSWER_XP = 5;
 const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 function EduMeLogo({ className = '' }) {
-  return <img className={`brand-mark ${className}`.trim()} src="/icon-192.png" alt="EduMe" />;
+  return <img className={`brand-mark ${className}`.trim()} src={`${import.meta.env.BASE_URL}icon-192.png`} alt="EduMe" />;
 }
 
 function makeId(prefix = 'id') {
@@ -124,6 +125,32 @@ function writeStorage(key, value) {
   } catch {
     return false;
   }
+}
+
+function recoverActiveTimer() {
+  const storedSessions = readStorage(STORAGE_KEYS.sessions, []);
+  const activeTimer = readStorage(STORAGE_KEYS.activeTimer, null);
+  if (!activeTimer) return storedSessions;
+
+  const elapsedSeconds = activeTimer.startedAt
+    ? Math.max(0, Math.floor((Date.now() - Number(activeTimer.startedAt)) / 1000))
+    : 0;
+  const durationSeconds = Math.max(0, Number(activeTimer.accumulatedSeconds) || 0) + elapsedSeconds;
+  writeStorage(STORAGE_KEYS.activeTimer, null);
+  if (durationSeconds < 1) return storedSessions;
+
+  const session = {
+    id: activeTimer.id || makeId('session'),
+    durationSeconds,
+    durationMinutes: durationSeconds / 60,
+    dateKey: buildDateKey(new Date(Number(activeTimer.startedAt) || Date.now())),
+    createdAt: new Date().toISOString(),
+  };
+  const nextSessions = [session, ...storedSessions.filter((item) => item.id !== session.id)];
+  writeStorage(STORAGE_KEYS.sessions, nextSessions);
+  const xpEarned = Math.floor(durationSeconds / 60) * 2;
+  writeStorage(STORAGE_KEYS.xp, (Number(readStorage(STORAGE_KEYS.xp, 0)) || 0) + xpEarned);
+  return nextSessions;
 }
 
 function getInitialUpdateNotice() {
@@ -493,7 +520,7 @@ function App() {
   const [profile, setProfile] = useState(getInitialProfile);
   const [tasks, setTasks] = useState(() => readStorage(STORAGE_KEYS.tasks, []).map((task) => ({ ...task, xpAwarded: task.xpAwarded ?? Boolean(task.completed) })));
   const [goals, setGoals] = useState(() => readStorage(STORAGE_KEYS.goals, []));
-  const [sessions, setSessions] = useState(() => readStorage(STORAGE_KEYS.sessions, []));
+  const [sessions, setSessions] = useState(recoverActiveTimer);
   const [settings, setSettings] = useState(getInitialSettings);
   const [theme, setTheme] = useState(() => {
     const storedTheme = readStorage(STORAGE_KEYS.theme, 'light');
@@ -546,6 +573,9 @@ function App() {
   const [utilityReturnPage, setUtilityReturnPage] = useState('home');
   const [utilityHistory, setUtilityHistory] = useState([]);
   const intervalRef = useRef(null);
+  const timerStartedAtRef = useRef(null);
+  const timerAccumulatedSecondsRef = useRef(0);
+  const timerSessionIdRef = useRef(null);
   const focusModeRef = useRef(null);
 
   const todayTasks = useMemo(() => getTodayTasks(tasks), [tasks]);
@@ -805,11 +835,34 @@ function App() {
       return;
     }
 
-    intervalRef.current = setInterval(() => {
-      setTimerSeconds((prev) => prev + 1);
-    }, 1000);
+    const updateTimer = () => {
+      const elapsedSeconds = timerAccumulatedSecondsRef.current
+        + Math.max(0, Math.floor((Date.now() - timerStartedAtRef.current) / 1000));
+      setTimerSeconds(elapsedSeconds);
+      writeStorage(STORAGE_KEYS.activeTimer, {
+        id: timerSessionIdRef.current,
+        startedAt: timerStartedAtRef.current,
+        accumulatedSeconds: timerAccumulatedSecondsRef.current,
+      });
+      recoverActiveTimer();
+    };
+    updateTimer();
+    intervalRef.current = setInterval(updateTimer, 1000);
 
     return () => clearInterval(intervalRef.current);
+  }, [timerRunning]);
+
+  useEffect(() => {
+    const saveActiveTimerOnClose = () => {
+      if (!timerSessionIdRef.current || !timerRunning) return;
+      writeStorage(STORAGE_KEYS.activeTimer, {
+        id: timerSessionIdRef.current,
+        startedAt: timerStartedAtRef.current,
+        accumulatedSeconds: timerAccumulatedSecondsRef.current,
+      });
+    };
+    window.addEventListener('beforeunload', saveActiveTimerOnClose);
+    return () => window.removeEventListener('beforeunload', saveActiveTimerOnClose);
   }, [timerRunning]);
 
   useEffect(() => {
@@ -1172,12 +1225,42 @@ function App() {
     triggerToast('✓ Goal Deleted');
   };
 
+  const getCurrentTimerSeconds = () => {
+    if (!timerStartedAtRef.current) return timerAccumulatedSecondsRef.current || timerSeconds;
+    return timerAccumulatedSecondsRef.current
+      + Math.max(0, Math.floor((Date.now() - timerStartedAtRef.current) / 1000));
+  };
+
+  const startTimer = () => {
+    playSound('tap');
+    timerAccumulatedSecondsRef.current = timerSeconds;
+    timerStartedAtRef.current = Date.now();
+    timerSessionIdRef.current = timerSessionIdRef.current || makeId('session');
+    setTimerFinished(false);
+    setTimerRunning(true);
+  };
+
+  const pauseTimer = () => {
+    playSound('tap');
+    const elapsedSeconds = getCurrentTimerSeconds();
+    timerAccumulatedSecondsRef.current = elapsedSeconds;
+    timerStartedAtRef.current = null;
+    setTimerSeconds(elapsedSeconds);
+    setTimerRunning(false);
+    writeStorage(STORAGE_KEYS.activeTimer, {
+      id: timerSessionIdRef.current,
+      startedAt: null,
+      accumulatedSeconds: elapsedSeconds,
+    });
+  };
+
   const handleTimerFinish = () => {
-    if (timerSeconds < 1) {
+    const currentTimerSeconds = getCurrentTimerSeconds();
+    if (currentTimerSeconds < 1) {
       triggerToast('Start the timer before finishing a session.');
       return;
     }
-    const durationSeconds = Math.floor(timerSeconds);
+    const durationSeconds = Math.floor(currentTimerSeconds);
     const durationMinutes = durationSeconds / 60;
     const session = {
       id: makeId('session'),
@@ -1197,6 +1280,10 @@ function App() {
     setTimerRunning(false);
     setTimerFinished(true);
     setTimerSeconds(0);
+    timerStartedAtRef.current = null;
+    timerAccumulatedSecondsRef.current = 0;
+    timerSessionIdRef.current = null;
+    writeStorage(STORAGE_KEYS.activeTimer, null);
     setXp(nextXp);
     setSessionSummary({ durationMinutes, xpEarned, level: nextLevelInfo.level, badges: nextBadges });
     playSound('finish');
@@ -1455,7 +1542,7 @@ function App() {
                 <p style={{ margin: '0 0 12px 0', color: 'var(--text-soft)', fontSize: 14 }}>{challenge.description}</p>
                 <button className="primary-btn" style={{ fontSize: 13, padding: '8px 12px' }} onClick={() => {
                   if (challenge.actionText === 'View Tasks') navigateToPage('planner');
-                  else if (challenge.actionText === 'Start Timer') { playSound('tap'); setTimerFinished(false); setTimerRunning(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+                  else if (challenge.actionText === 'Start Timer') { startTimer(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
                   else if (challenge.actionText === 'Add Goal') setGoalModal({ open: true, mode: 'create', goal: null });
                   else if (challenge.actionText === 'Add Task') openPlannerModal();
                   else if (challenge.actionText === 'View Progress') navigateToPage('progress');
@@ -2618,11 +2705,11 @@ function App() {
         </div>
         <div className="timer-controls">
           {!timerRunning ? (
-            <button className="primary-btn" onClick={() => { playSound('tap'); setTimerFinished(false); setTimerRunning(true); }}>Start</button>
+            <button className="primary-btn" onClick={startTimer}>Start</button>
           ) : (
-            <button className="secondary-btn" onClick={() => { playSound('tap'); setTimerRunning(false); }}>Pause</button>
+            <button className="secondary-btn" onClick={pauseTimer}>Pause</button>
           )}
-          {timerSeconds > 0 && <button className="ghost-btn" onClick={() => { playSound('tap'); setTimerFinished(false); setTimerRunning(true); }}>Resume</button>}
+          {timerSeconds > 0 && <button className="ghost-btn" onClick={startTimer}>Resume</button>}
           <button className="ghost-btn" onClick={openFocusMode}>Focus Mode</button>
           <button className="danger-btn" onClick={handleTimerFinish}>Finish Session</button>
         </div>
@@ -2656,7 +2743,7 @@ function App() {
           <button className="primary-btn notification-summary-action" onClick={() => {
             if (missedTasks.length || pendingTodayTasks.length) navigateToPage('planner');
             else if (examDaysRemaining === null) navigateToPage('profile');
-            else { setTimerFinished(false); setTimerRunning(true); navigateToPage('home'); }
+            else { startTimer(); navigateToPage('home'); }
           }}>
             {missedTasks.length || pendingTodayTasks.length ? 'Open Planner' : examDaysRemaining === null ? 'Set Exam Date' : 'Start Studying'}
           </button>
@@ -2676,7 +2763,7 @@ function App() {
             {remainingGoalMinutes === 0 && todaysMinutes > 0 && <p><strong>Great work!</strong> You completed today&apos;s study goal.</p>}
             {upcomingNotificationTasks.slice(0, 3).map((task) => <div className="notification-row" key={task.id}><span>{task.name}</span><span className="badge">{formatShortDate(task.date)}</span></div>)}
             {pendingTodayTasks.length === 0 && upcomingNotificationTasks.length === 0 && remainingGoalMinutes === 0 && <p className="muted">You are all caught up for today.</p>}
-            <button className="primary-btn notification-action-btn" onClick={() => { setTimerFinished(false); setTimerRunning(true); navigateToPage('home'); }}>Start Studying</button>
+            <button className="primary-btn notification-action-btn" onClick={() => { startTimer(); navigateToPage('home'); }}>Start Studying</button>
           </section>
 
           <section className="card notification-card notification-focus">
@@ -2739,7 +2826,7 @@ function App() {
               <span className="section-kicker">CURRENT STREAK</span>
               <h2>{streak > 0 ? `${streak} day${streak === 1 ? '' : 's'} strong` : 'Start your streak'}</h2>
               <p className="muted">{streak >= 1 ? 'Keep showing up with one focused study session today.' : 'Your streak starts with one focused 10-minute session.'}</p>
-              <button className="primary-btn" onClick={() => { setTimerFinished(false); setTimerRunning(true); closeUtilityPage(); }}>Start Study Session</button>
+              <button className="primary-btn" onClick={() => { startTimer(); closeUtilityPage(); }}>Start Study Session</button>
             </div>
           </div>
           <div className="streak-metrics">
@@ -3028,11 +3115,11 @@ function App() {
                 <div className="timer-display" style={{ margin: '18px 0' }}>{formatTimeDisplay(timerSeconds)}</div>
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
                   {!timerRunning ? (
-                    <button className="primary-btn" onClick={() => { playSound('tap'); setTimerFinished(false); setTimerRunning(true); }}>Start</button>
+                    <button className="primary-btn" onClick={startTimer}>Start</button>
                   ) : (
-                    <button className="secondary-btn" onClick={() => { playSound('tap'); setTimerRunning(false); }}>Pause</button>
+                    <button className="secondary-btn" onClick={pauseTimer}>Pause</button>
                   )}
-                  <button className="ghost-btn" onClick={() => { playSound('tap'); setTimerFinished(false); setTimerRunning(true); }}>Resume</button>
+                  <button className="ghost-btn" onClick={startTimer}>Resume</button>
                   <button className="ghost-btn" onClick={openFullScreenMode}>Full Screen</button>
                   <button className="danger-btn" onClick={handleTimerFinish}>Finish Session</button>
                 </div>
@@ -3057,11 +3144,11 @@ function App() {
                 <div className="timer-display" style={{ margin: '18px 0' }}>{formatTimeDisplay(timerSeconds)}</div>
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
                   {!timerRunning ? (
-                    <button className="primary-btn" onClick={() => { playSound('tap'); setTimerFinished(false); setTimerRunning(true); }}>Start</button>
+                    <button className="primary-btn" onClick={startTimer}>Start</button>
                   ) : (
-                    <button className="secondary-btn" onClick={() => { playSound('tap'); setTimerRunning(false); }}>Pause</button>
+                    <button className="secondary-btn" onClick={pauseTimer}>Pause</button>
                   )}
-                  <button className="ghost-btn" onClick={() => { playSound('tap'); setTimerFinished(false); setTimerRunning(true); }}>Resume</button>
+                  <button className="ghost-btn" onClick={startTimer}>Resume</button>
                   <button className="ghost-btn" onClick={openFullScreenMode}>Full Screen</button>
                   <button className="danger-btn" onClick={handleTimerFinish}>Finish Session</button>
                 </div>
@@ -3102,7 +3189,7 @@ function App() {
             <div className="modal-backdrop developer-modal-overlay" onClick={() => setDeveloperModalOpen(false)}>
               <div className="modal developer-modal-card" role="dialog" aria-modal="true" aria-labelledby="developer-modal-title" onClick={(event) => event.stopPropagation()}>
                 <button className="icon-btn developer-modal-close" onClick={() => setDeveloperModalOpen(false)} aria-label="Close developer profile" title="Close">×</button>
-                <img className="developer-modal-avatar" src="/image-1789912580558.jpeg" alt="Shiv Bibhuti Mishra" onError={(event) => { event.currentTarget.src = '/icon-192.png'; }} />
+                <img className="developer-modal-avatar" src={`${import.meta.env.BASE_URL}image-1789912580558.jpeg`} alt="Shiv Bibhuti Mishra" />
                 <span className="section-kicker">THE CREATOR BEHIND EDUME</span>
                 <h2 id="developer-modal-title">Shiv Bibhuti Mishra (SBM)</h2>
                 <h3>Creator of EduMe | Web Developer</h3>
