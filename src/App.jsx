@@ -2462,7 +2462,7 @@ function App() {
               <li>App: <button className="about-app-name-link" onClick={() => openUtilityPage('about-details')} aria-label="Open detailed information about EduMe">EduMe</button></li>
               <li>Version: <button className="version-link" onClick={() => openUtilityPage('whats-new')}>v1.1</button></li>
               <li>Type: Student Study App</li>
-              <li>Designed and developed by <button className="developer-link about-developer-link" onClick={() => setDeveloperModalOpen(true)}>SBM</button></li>
+              <li>Designed &amp; Developed by <button className="developer-link about-developer-link" onClick={() => setDeveloperModalOpen(true)}>Shiv Bibhuti Mishra (SBM)</button></li>
             </ul>
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -2497,6 +2497,7 @@ function App() {
           </div>
           <footer className="mobile-about-footer" aria-label="EduMe mobile footer">
             <span>© 2026 EduMe. All rights reserved.</span>
+            <span>EduMe — Student Study Planner</span>
             <span>Developed with ❤️ by <button className="developer-link" onClick={() => setDeveloperModalOpen(true)}>Shiv Bibhuti Mishra</button> | Brand: SBM</span>
           </footer>
         </div>
@@ -2781,7 +2782,7 @@ function App() {
     <div className="onboarding-screen">
       <div className="onboarding-shell">
         <div className="onboarding-header">
-          <div className="brand"><EduMeLogo /> <span>EduMe</span></div>
+          <div className="brand onboarding-brand"><EduMeLogo className="onboarding-logo" /> <span>EduMe</span></div>
           <span className="badge">Study workspace</span>
         </div>
         <div className="onboarding-intro">
@@ -2878,7 +2879,10 @@ function App() {
 
                 <footer className="app-footer" aria-label="EduMe footer">
                   <div className="app-footer__meta">© 2026 EduMe. All rights reserved.</div>
-                  <div className="app-footer__credit">Developed with ❤️ by <button className="developer-link" onClick={() => setDeveloperModalOpen(true)}>Shiv Bibhuti Mishra</button> | Brand: SBM</div>
+                  <div className="app-footer__credit">
+                    <span>EduMe — Student Study Planner</span>
+                    <span>Developed with ❤️ by <button className="developer-link" onClick={() => setDeveloperModalOpen(true)}>Shiv Bibhuti Mishra</button> | Brand: SBM</span>
+                  </div>
                 </footer>
               </div>
             </aside>
@@ -3100,12 +3104,12 @@ function App() {
                 <button className="icon-btn developer-modal-close" onClick={() => setDeveloperModalOpen(false)} aria-label="Close developer profile" title="Close">×</button>
                 <img className="developer-modal-avatar" src="/image-1789912580558.jpeg" alt="Shiv Bibhuti Mishra" onError={(event) => { event.currentTarget.src = '/icon-192.png'; }} />
                 <span className="section-kicker">THE CREATOR BEHIND EDUME</span>
-                <h2 id="developer-modal-title">Shiv Bibhuti Mishra</h2>
+                <h2 id="developer-modal-title">Shiv Bibhuti Mishra (SBM)</h2>
                 <h3>Creator of EduMe | Web Developer</h3>
                 <p className="developer-modal-bio">Building EduMe 🚀 | Student &amp; Developer 📚<br />Learning • Building • Improving ✨<br />Turning ideas into useful projects.</p>
                 <div className="developer-social-links" aria-label="Developer social links">
-                  <a className="primary-btn" href="https://github.com" target="_blank" rel="noreferrer">GitHub ↗</a>
-                  <a className="secondary-btn" href="https://linkedin.com" target="_blank" rel="noreferrer">LinkedIn ↗</a>
+                  <a className="primary-btn" href="https://github.com/sbmnexus" target="_blank" rel="noreferrer">GitHub ↗</a>
+                  <a className="secondary-btn" href="https://www.linkedin.com/in/shiv-bibhuti-mishra" target="_blank" rel="noreferrer">LinkedIn ↗</a>
                 </div>
               </div>
             </div>
