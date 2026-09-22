@@ -851,9 +851,11 @@ function App() {
     syncFocusOrientation();
     screen.orientation?.addEventListener?.('change', syncFocusOrientation);
     window.addEventListener('resize', syncFocusOrientation);
+    window.addEventListener('orientationchange', syncFocusOrientation);
     return () => {
       screen.orientation?.removeEventListener?.('change', syncFocusOrientation);
       window.removeEventListener('resize', syncFocusOrientation);
+      window.removeEventListener('orientationchange', syncFocusOrientation);
     };
   }, [fullScreen]);
 
@@ -2463,7 +2465,7 @@ function App() {
               .card:nth-of-type(3) h2 { color:#c2410c; }
               .card:last-child { background:linear-gradient(135deg,#5124b7,#0f9f9a); color:#fff; text-align:center; }
               .card:last-child h2, .card:last-child p { color:#fff; }
-              @media (max-width:640px) { body { padding:16px; } .header { align-items:flex-start; gap:14px; flex-direction:column; } .activity-card-header { gap:8px; flex-direction:column; } .report-subtitle { max-width:none; margin-top:0; text-align:left; } .grid, .kpi-grid { grid-template-columns:1fr 1fr; } .activity-grid { gap:5px; } .activity-day strong { font-size:12px; } .activity-track { width:18px; } .card { padding:18px; } }
+              @media (max-width:640px) { body { padding:16px; } .header { align-items:flex-start; gap:14px; flex-direction:column; } .activity-card-header { gap:8px; flex-direction:column; } .report-subtitle { max-width:none; margin-top:0; text-align:left; white-space:nowrap; } .grid, .kpi-grid { grid-template-columns:1fr 1fr; } .activity-grid { gap:5px; } .activity-day strong { font-size:12px; } .activity-track { width:18px; } .card { padding:18px; } }
             </style>
           </head>
           <body>
@@ -2767,7 +2769,7 @@ function App() {
           {!timerRunning ? (
             <button className={timerSeconds > 0 ? 'secondary-btn' : 'primary-btn'} onClick={startTimer}>{timerSeconds > 0 ? '▶ Resume' : '▶ Start'}</button>
           ) : (
-            <button className="secondary-btn" onClick={pauseTimer}>⏸ Pause</button>
+            <button className="secondary-btn" onClick={pauseTimer}><span className="pause-icon" aria-hidden="true" />Pause</button>
           )}
           <button className="ghost-btn timer-reset-btn" onClick={resetTimer}>↻ Reset</button>
           <button className="ghost-btn" onClick={openFocusMode}>Focus Mode</button>
@@ -3177,7 +3179,7 @@ function App() {
                   {!timerRunning ? (
                     <button className={timerSeconds > 0 ? 'secondary-btn' : 'primary-btn'} onClick={startTimer}>{timerSeconds > 0 ? '▶ Resume' : '▶ Start'}</button>
                   ) : (
-                    <button className="secondary-btn" onClick={pauseTimer}>⏸ Pause</button>
+                    <button className="secondary-btn" onClick={pauseTimer}><span className="pause-icon" aria-hidden="true" />Pause</button>
                   )}
                   <button className="ghost-btn timer-reset-btn" onClick={resetTimer}>↻ Reset</button>
                   <button className="ghost-btn" onClick={openFullScreenMode}>Full Screen</button>
@@ -3198,7 +3200,7 @@ function App() {
                   aria-label={timerRunning ? 'Pause timer' : timerSeconds > 0 ? 'Resume timer' : 'Start timer'}
                   title={timerRunning ? 'Pause timer' : timerSeconds > 0 ? 'Resume timer' : 'Start timer'}
                 >
-                  {timerRunning ? '⏸' : '▶'}
+                  {timerRunning ? <span className="pause-icon" aria-hidden="true" /> : '▶'}
                 </button>
               </div>
             </div>
@@ -3216,7 +3218,7 @@ function App() {
                   {!timerRunning ? (
                     <button className={timerSeconds > 0 ? 'secondary-btn' : 'primary-btn'} onClick={startTimer}>{timerSeconds > 0 ? '▶ Resume' : '▶ Start'}</button>
                   ) : (
-                    <button className="secondary-btn" onClick={pauseTimer}>⏸ Pause</button>
+                    <button className="secondary-btn" onClick={pauseTimer}><span className="pause-icon" aria-hidden="true" />Pause</button>
                   )}
                   <button className="ghost-btn timer-reset-btn" onClick={resetTimer}>↻ Reset</button>
                   <button className="ghost-btn" onClick={openFullScreenMode}>Full Screen</button>
