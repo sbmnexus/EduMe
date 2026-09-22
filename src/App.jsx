@@ -127,6 +127,30 @@ function writeStorage(key, value) {
   }
 }
 
+async function showEduMeNotification(title, options) {
+  if (typeof window === 'undefined' || !window.Notification || window.Notification.permission !== 'granted') {
+    return false;
+  }
+
+  try {
+    if ('serviceWorker' in navigator) {
+      const registration = await navigator.serviceWorker.ready;
+      await registration.showNotification(title, options);
+      return true;
+    }
+  } catch (error) {
+    console.error('Service worker notification failed:', error);
+  }
+
+  try {
+    new window.Notification(title, options);
+    return true;
+  } catch (error) {
+    console.error('Browser notification failed:', error);
+    return false;
+  }
+}
+
 function recoverActiveTimer() {
   const storedSessions = readStorage(STORAGE_KEYS.sessions, []);
   const activeTimer = readStorage(STORAGE_KEYS.activeTimer, null);
@@ -595,6 +619,7 @@ function App() {
   const examDaysRemaining = useMemo(() => getExamDaysRemaining(profile.examDate), [profile.examDate, currentDateKey]);
   const todaysMinutes = useMemo(() => calculateDailyStudyMinutes(sessions), [sessions]);
   const streak = useMemo(() => calculateStreak(tasks, sessions), [tasks, sessions]);
+  const streakLevel = streak >= 7 ? 'blazing' : streak >= 4 ? 'on-fire' : streak >= 1 ? 'building' : 'start';
   const activeGoals = useMemo(() => goals.filter((g) => !g.completed), [goals]);
   const completedGoals = useMemo(() => goals.filter((g) => g.completed), [goals]);
   const todayGoalMinutes = Number(profile.dailyStudyHours || 0) * 60;
@@ -690,7 +715,7 @@ function App() {
     const NotificationApi = typeof window !== 'undefined' ? window.Notification : undefined;
     if (!settings.notificationReminder || !NotificationApi || NotificationApi.permission !== 'granted') return undefined;
 
-    const sendReminder = () => {
+    const sendReminder = async () => {
       const today = getCurrentDateKey();
       if (readStorage(STORAGE_KEYS.notificationLastShown, '') === today) return;
       const tomorrow = new Date(`${today}T00:00:00`);
@@ -704,13 +729,12 @@ function App() {
       if (!dueTasks.length && !examNotice && !upcomingNotice) return;
       const taskNotice = dueTasks.length ? `${dueTasks.length} due study task${dueTasks.length === 1 ? '' : 's'}.` : '';
       
-      try {
-        new NotificationApi('EduMe Notification Reminder', { body: `${taskNotice}${upcomingNotice}${examNotice}`, icon: '/icon-192.png' });
-      } catch (error) {
-        console.error('Error sending notification:', error);
-      }
-      
-      writeStorage(STORAGE_KEYS.notificationLastShown, today);
+      const shown = await showEduMeNotification('EduMe Notification Reminder', {
+        body: `${taskNotice}${upcomingNotice}${examNotice}`,
+        icon: '/icon-192.png',
+        tag: 'edume-notification-reminder',
+      });
+      if (shown) writeStorage(STORAGE_KEYS.notificationLastShown, today);
     };
 
     sendReminder();
@@ -722,7 +746,7 @@ function App() {
     const NotificationApi = typeof window !== 'undefined' ? window.Notification : undefined;
     if (!settings.studyReminder || !NotificationApi || NotificationApi.permission !== 'granted') return undefined;
 
-    const sendStudyReminder = () => {
+    const sendStudyReminder = async () => {
       const today = getCurrentDateKey();
       if (readStorage(STORAGE_KEYS.studyReminderLastShown, '') === today) return;
 
@@ -744,16 +768,12 @@ function App() {
         : '';
       const quizMessage = completedQuizToday ? '' : 'Take a quiz today to strengthen your preparation.';
       
-      try {
-        new NotificationApi('EduMe Study Reminder', {
-          body: `${taskMessage} ${goalMessage} ${streakMessage} ${quizMessage}`.trim(),
-          icon: '/icon-192.png',
-        });
-      } catch (error) {
-        console.error('Error sending notification:', error);
-      }
-      
-      writeStorage(STORAGE_KEYS.studyReminderLastShown, today);
+      const shown = await showEduMeNotification('EduMe Study Reminder', {
+        body: `${taskMessage} ${goalMessage} ${streakMessage} ${quizMessage}`.trim(),
+        icon: '/icon-192.png',
+        tag: 'edume-study-reminder',
+      });
+      if (shown) writeStorage(STORAGE_KEYS.studyReminderLastShown, today);
     };
 
     sendStudyReminder();
@@ -818,6 +838,23 @@ function App() {
     };
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, [fullScreen]);
+
+  useEffect(() => {
+    if (!fullScreen) return undefined;
+
+    const syncFocusOrientation = () => {
+      const orientationType = screen.orientation?.type || '';
+      setTimerLandscape(orientationType.includes('landscape') || window.innerWidth > window.innerHeight);
+    };
+
+    syncFocusOrientation();
+    screen.orientation?.addEventListener?.('change', syncFocusOrientation);
+    window.addEventListener('resize', syncFocusOrientation);
+    return () => {
+      screen.orientation?.removeEventListener?.('change', syncFocusOrientation);
+      window.removeEventListener('resize', syncFocusOrientation);
+    };
   }, [fullScreen]);
 
   useEffect(() => {
@@ -951,16 +988,9 @@ function App() {
 
   const openFocusMode = async () => {
     setFocusModeOpen(true);
-    setFullScreen(true);
+    setFullScreen(false);
     setTimerLandscape(false);
     setTimerOnlyMode(false);
-    try {
-      if (!document.fullscreenElement) {
-        await (focusModeRef.current || document.documentElement).requestFullscreen();
-      }
-    } catch (error) {
-      triggerToast('Fullscreen or rotation is unavailable in this browser.');
-    }
   };
 
   const openTimerOnlyMode = async () => {
@@ -969,6 +999,7 @@ function App() {
     setTimerOnlyMode(true);
     try {
       if (!document.fullscreenElement) await document.documentElement.requestFullscreen();
+      screen.orientation?.unlock?.();
     } catch {
       triggerToast('Timer-only fullscreen mode enabled. Rotate your phone for landscape.');
     }
@@ -1060,6 +1091,7 @@ function App() {
     try {
       const granted = await requestNotificationPermission();
       if (granted) {
+        removeStorage(STORAGE_KEYS.studyReminderLastShown);
         setSettings((current) => ({ ...current, studyReminder: true }));
         triggerToast('✓ Study reminders enabled');
       }
@@ -1081,6 +1113,8 @@ function App() {
     try {
       const granted = await requestNotificationPermission();
       if (granted) {
+        removeStorage(STORAGE_KEYS.studyReminderLastShown);
+        removeStorage(STORAGE_KEYS.notificationLastShown);
         setSettings((current) => ({ ...current, studyReminder: true, notificationReminder: true }));
         triggerToast('✓ Study & notification reminders enabled');
       }
@@ -1985,7 +2019,7 @@ function App() {
           <div className="card inset-panel">
             <div className="section-header">
               <div>
-                <button className="icon-btn utility-back-btn" onClick={() => setQuizHistoryDetail(null)} aria-label="Back to Quiz" title="Back to Quiz">←</button>
+                <button className="icon-btn utility-back-btn quiz-result-back" onClick={() => setQuizHistoryDetail(null)} aria-label="Back to Quiz" title="Back to Quiz">Back</button>
                 <h2 style={{ marginTop: 14 }}>Quiz Result</h2>
               </div>
               <span className="muted">{detailDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
@@ -2545,11 +2579,11 @@ function App() {
           <div style={{ display: 'grid', gap: 16 }}>
           <div className="card info-card" style={{ padding: 16 }}>
             <strong className="highlight-text">App Information</strong>
-            <ul style={{ margin: '10px 0 0', paddingLeft: 18, lineHeight: 1.8 }}>
+            <ul className="about-info-list">
               <li>App: <button className="about-app-name-link" onClick={() => openUtilityPage('about-details')} aria-label="Open detailed information about EduMe">EduMe</button></li>
               <li>Version: <button className="version-link" onClick={() => openUtilityPage('whats-new')}>v1.1</button></li>
               <li>Type: Student Study App</li>
-              <li>Designed &amp; Developed by <button className="developer-link about-developer-link" onClick={() => setDeveloperModalOpen(true)}>Shiv Bibhuti Mishra (SBM)</button></li>
+              <li className="about-developer-item"><span>Designed &amp; Developed by</span><button className="developer-link about-developer-link" onClick={() => setDeveloperModalOpen(true)}>Shiv Bibhuti Mishra (SBM)</button></li>
             </ul>
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -2922,8 +2956,8 @@ function App() {
             </button>
             <div className="brand desktop-brand"><EduMeLogo /> <span>EduMe</span></div>
             <div className="topbar-actions">
-              <button className="icon-btn utility-header-btn streak-header-btn" onClick={() => openUtilityPage('streak')} aria-label={`Study streak: ${streak} days`} title={`Study streak: ${streak} days`}>
-                <span aria-hidden="true" className="streak-header-icon">🔥</span><strong className="streak-header-count">{streak}</strong>
+              <button className={`icon-btn utility-header-btn streak-header-btn streak-level-${streakLevel}`} onClick={() => openUtilityPage('streak')} aria-label={`Study streak: ${streak} days`} title={`Study streak: ${streak} days`}>
+                <span aria-hidden="true" className={`streak-header-icon streak-icon-${streakLevel}`}>🔥</span><strong className="streak-header-count">{streak}</strong>
               </button>
               <button className="icon-btn utility-header-btn notification-header-btn" onClick={() => openUtilityPage('notifications')} aria-label="Open notifications" title="Notifications">
                 <span aria-hidden="true">🔔</span>
@@ -3109,7 +3143,7 @@ function App() {
             <div className="modal-backdrop" style={{ background: 'rgba(15,23,42,0.8)' }}>
               <div ref={focusModeRef} className={`modal focus-mode-modal ${timerLandscape ? 'timer-landscape' : ''}`} style={{ background: 'var(--card)', padding: 28 }} onClick={(e) => e.stopPropagation()}>
                 <div className="section-header">
-                  <button className="icon-btn focus-back-btn" onClick={closeFocusMode} aria-label="Back to Home" title="Back to Home">←</button>
+                  <button className="icon-btn focus-back-btn" onClick={closeFocusMode} aria-label="Exit Focus Mode" title="Exit Focus Mode">Exit</button>
                   <span className="focus-mode-label">Focus Mode</span>
                 </div>
                 <div className="timer-display" style={{ margin: '18px 0' }}>{formatTimeDisplay(timerSeconds)}</div>
@@ -3251,7 +3285,7 @@ function TaskForm({ initialTask, onSubmit, onCancel }) {
         <label className="muted" style={{ display: 'block', marginBottom: 8 }}>Notes</label>
         <textarea className="textarea" value={form.notes || ''} onChange={(e) => update('notes', e.target.value)} />
       </div>
-      <div className="task-form-actions">
+      <div className="form-actions task-form-actions">
         <button type="button" className="ghost-btn" onClick={onCancel}>Cancel</button>
         <button type="button" className="primary-btn" onClick={() => onSubmit({ ...form, name: form.name.trim(), subject: form.subject.trim(), topic: form.topic.trim(), notes: form.notes?.trim() || '' })}>Save</button>
       </div>
@@ -3282,7 +3316,7 @@ function GoalForm({ initialGoal, onSubmit, onCancel }) {
         <label className="muted" style={{ display: 'block', marginBottom: 8 }}>Progress</label>
         <input className="input" type="number" min="0" max="100" value={form.progress || 0} onChange={(e) => update('progress', Number(e.target.value))} />
       </div>
-      <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+      <div className="form-actions">
         <button type="button" className="ghost-btn" onClick={onCancel}>Cancel</button>
         <button type="button" className="primary-btn" onClick={() => onSubmit({ ...form, name: form.name.trim(), description: form.description?.trim() || '', progress: Math.min(100, Math.max(0, Number(form.progress || 0))) })}>Save</button>
       </div>

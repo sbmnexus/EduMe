@@ -1,4 +1,4 @@
-const CACHE_NAME = 'EduMe-v1.1.3';
+const CACHE_NAME = 'EduMe-v1.1.4';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -31,5 +31,15 @@ self.addEventListener('fetch', (event) => {
       }
       return response;
     }).catch(() => caches.match(event.request).then((cached) => cached || caches.match('/index.html'))),
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      const appClient = windowClients.find((client) => 'focus' in client);
+      return appClient ? appClient.focus() : clients.openWindow('/');
+    }),
   );
 });
