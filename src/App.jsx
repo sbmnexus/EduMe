@@ -685,10 +685,10 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!profile.targetExam || quizExam) return;
+    if (!profile.targetExam) return;
     setQuizExam(profile.targetExam);
     setQuizSubject(examSubjects[profile.targetExam]?.[0] || '');
-  }, [profile.targetExam, quizExam]);
+  }, [profile.targetExam]);
 
   useEffect(() => {
     writeStorage(STORAGE_KEYS.tasks, tasks);
@@ -881,7 +881,6 @@ function App() {
         startedAt: timerStartedAtRef.current,
         accumulatedSeconds: timerAccumulatedSecondsRef.current,
       });
-      recoverActiveTimer();
     };
     updateTimer();
     intervalRef.current = setInterval(updateTimer, 1000);
@@ -1043,7 +1042,12 @@ function App() {
 
   const shareReferralLink = async () => {
     const link = getReferralLink();
-    const shareData = { title: 'Study smarter with EduMe', text: 'I am using EduMe to plan my studies and practice quizzes. Try it too:', url: link };
+    const inviterName = profile.name?.trim();
+    const shareData = {
+      title: 'Study smarter with EduMe',
+      text: 'Hi! I am using EduMe to plan studies, practice quizzes, and track progress...',
+      url: link,
+    };
     if (navigator.share) {
       try {
         await navigator.share(shareData);
@@ -1286,6 +1290,17 @@ function App() {
       startedAt: null,
       accumulatedSeconds: elapsedSeconds,
     });
+  };
+
+  const resetTimer = () => {
+    playSound('tap');
+    timerStartedAtRef.current = null;
+    timerAccumulatedSecondsRef.current = 0;
+    timerSessionIdRef.current = null;
+    setTimerRunning(false);
+    setTimerFinished(false);
+    setTimerSeconds(0);
+    writeStorage(STORAGE_KEYS.activeTimer, null);
   };
 
   const handleTimerFinish = () => {
@@ -1882,12 +1897,12 @@ function App() {
           <div className="profile-section-label">PERSONAL &amp; EXAM DETAILS</div>
           <div>
             <label className="muted" style={{ display: 'block', marginBottom: 8 }}>Name</label>
-            <input className="input" value={profile.name} onChange={(e) => setProfile((current) => ({ ...current, name: e.target.value }))} placeholder="Fill Your Name" />
+            <input className="input" value={profile.name} onChange={(e) => setProfile((current) => ({ ...current, name: e.target.value }))} placeholder="Enter your name" />
           </div>
           <div>
             <label className="muted" style={{ display: 'block', marginBottom: 8 }}>Target Exam</label>
             <select className="select" value={profile.targetExam} onChange={(e) => setProfile((current) => ({ ...current, targetExam: e.target.value, customExamName: e.target.value === 'OTHER' ? current.customExamName : '' }))}>
-              <option value="" disabled>Select Your Exam</option><option>JEE MAINS & ADVANCE</option><option>NEET</option><option>BOARDS</option><option>UPSC</option><option>NDA</option><option>SSC</option><option>CUET</option><option>CA</option><option>OTHER</option>
+              <option value="" disabled>Select your exam</option><option>JEE MAINS & ADVANCE</option><option>NEET</option><option>BOARDS</option><option>UPSC</option><option>NDA</option><option>SSC</option><option>CUET</option><option>CA</option><option>OTHER</option>
             </select>
           </div>
           {profile.targetExam === 'OTHER' && (
@@ -1902,16 +1917,16 @@ function App() {
           </div>
           <div>
             <label className="muted" style={{ display: 'block', marginBottom: 8 }}>Class</label>
-            <input className="input" value={profile.className} onChange={(e) => setProfile((current) => ({ ...current, className: e.target.value }))} placeholder="Fill Your Class" />
+            <input className="input" value={profile.className} onChange={(e) => setProfile((current) => ({ ...current, className: e.target.value }))} placeholder="Enter your class" />
           </div>
           <div className="profile-section-label">STUDY PREFERENCES</div>
           <div>
             <label className="muted" style={{ display: 'block', marginBottom: 8 }}>Weak Subjects</label>
-            <input className="input" value={profile.weakSubjects} onChange={(e) => setProfile((current) => ({ ...current, weakSubjects: e.target.value }))} placeholder="Fill Your Weak Subjects" />
+            <input className="input" value={profile.weakSubjects} onChange={(e) => setProfile((current) => ({ ...current, weakSubjects: e.target.value }))} placeholder="Enter your weak subjects" />
           </div>
           <div>
             <label className="muted" style={{ display: 'block', marginBottom: 8 }}>Daily Study Hours</label>
-            <input className="input" type="number" min="1" max="24" value={profile.dailyStudyHours} onChange={(e) => setProfile((current) => ({ ...current, dailyStudyHours: e.target.value }))} placeholder="Enter Daily Study Hours" />
+            <input className="input" type="number" min="1" max="24" value={profile.dailyStudyHours} onChange={(e) => setProfile((current) => ({ ...current, dailyStudyHours: e.target.value }))} placeholder="Enter daily study hours" />
           </div>
           <button className="primary-btn" type="submit">Save Profile</button>
         </form>
@@ -2233,7 +2248,11 @@ function App() {
 
         <div className="progress-panel-grid">
           <div className="card progress-chart-panel">
-            <div className="section-header"><div><span className="section-kicker">THIS WEEK</span><h3>Study activity</h3></div><span className="muted">Minutes per day</span></div>
+            <div className="progress-activity-header">
+              <div className="progress-activity-title"><span className="section-kicker">THIS WEEK</span><h3>Study activity</h3></div>
+              <span className="progress-activity-unit">Minutes per day</span>
+            </div>
+            <p className="progress-activity-helper muted">Your focused study time across the last seven days.</p>
             {hasWeeklyStudyData ? (
               <div className="activity-chart" aria-label="Study activity for the last seven days">
                 {studyTrend.map((day) => <div className="chart-column" key={day.key}><strong>{day.minutes ? Math.round(day.minutes) : ''}</strong><div className="chart-track"><span style={{ height: `${day.minutes ? Math.max(8, (day.minutes / maxStudyMinutes) * 100) : 0}%` }} /></div><small>{day.label}</small></div>)}
@@ -2435,12 +2454,16 @@ function App() {
               .performance-summary { background:linear-gradient(135deg,#e0f2fe,#ecfdf5 52%,#fff7ed); border:1px solid rgba(20,184,166,.36); box-shadow:0 16px 32px rgba(15,118,110,.14); }
               .bar { height: 10px; background:#e2e8f0; border-radius:999px; overflow:hidden; margin-top:6px; }
               .bar span { display:block; height:100%; background:linear-gradient(90deg,#7c3aed,#14b8a6,#f59e0b); }
+              .activity-card-header { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; }
+              .activity-card-header h2 { margin:5px 0 0; }
+              .section-kicker { display:block; color:#64748b; font-size:11px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; }
+              .report-subtitle { max-width:230px; margin:3px 0 0; color:#64748b; font-size:12px; line-height:1.45; text-align:right; }
               h2 { color:#312e81; margin-top:0; }
               .card:nth-of-type(2) h2 { color:#0f766e; }
               .card:nth-of-type(3) h2 { color:#c2410c; }
               .card:last-child { background:linear-gradient(135deg,#5124b7,#0f9f9a); color:#fff; text-align:center; }
               .card:last-child h2, .card:last-child p { color:#fff; }
-              @media (max-width:640px) { body { padding:16px; } .header { align-items:flex-start; gap:14px; flex-direction:column; } .grid, .kpi-grid { grid-template-columns:1fr 1fr; } .activity-grid { gap:5px; } .activity-day strong { font-size:12px; } .activity-track { width:18px; } .card { padding:18px; } }
+              @media (max-width:640px) { body { padding:16px; } .header { align-items:flex-start; gap:14px; flex-direction:column; } .activity-card-header { gap:8px; flex-direction:column; } .report-subtitle { max-width:none; margin-top:0; text-align:left; } .grid, .kpi-grid { grid-template-columns:1fr 1fr; } .activity-grid { gap:5px; } .activity-day strong { font-size:12px; } .activity-track { width:18px; } .card { padding:18px; } }
             </style>
           </head>
           <body>
@@ -2473,7 +2496,10 @@ function App() {
               </div>
             </div>
             <div class="card">
-              <h2>Weekly Study Activity</h2>
+              <div class="activity-card-header">
+                <div><span class="section-kicker">THIS WEEK</span><h2>Study activity</h2></div>
+                <p class="report-subtitle">Minutes per day across the last seven days.</p>
+              </div>
               <div class="activity-grid">${activityHtml}</div>
             </div>
             <div class="card">
@@ -2739,11 +2765,11 @@ function App() {
         </div>
         <div className="timer-controls">
           {!timerRunning ? (
-            <button className="primary-btn" onClick={startTimer}>Start</button>
+            <button className={timerSeconds > 0 ? 'secondary-btn' : 'primary-btn'} onClick={startTimer}>{timerSeconds > 0 ? '▶ Resume' : '▶ Start'}</button>
           ) : (
-            <button className="secondary-btn" onClick={pauseTimer}>Pause</button>
+            <button className="secondary-btn" onClick={pauseTimer}>⏸ Pause</button>
           )}
-          {timerSeconds > 0 && <button className="ghost-btn" onClick={startTimer}>Resume</button>}
+          <button className="ghost-btn timer-reset-btn" onClick={resetTimer}>↻ Reset</button>
           <button className="ghost-btn" onClick={openFocusMode}>Focus Mode</button>
           <button className="danger-btn" onClick={handleTimerFinish}>Finish Session</button>
         </div>
@@ -2800,9 +2826,9 @@ function App() {
             <button className="primary-btn notification-action-btn" onClick={() => { startTimer(); navigateToPage('home'); }}>Start Studying</button>
           </section>
 
-          <section className="card notification-card notification-focus">
+          <section className="card notification-card notification-focus notification-focus-card">
             <div className="notification-card-title"><span className="notification-symbol">🎯</span><div><h2>Weak Subject Focus</h2><span className="muted">Extra attention for today</span></div></div>
-            {weakSubjects.length > 0 ? <><div className="focus-subject-list">{weakSubjects.map((subject) => <span className="focus-subject" key={subject}>{subject}</span>)}</div><p>{weakSubjectTasks.length ? `${weakSubjectTasks.length} related task${weakSubjectTasks.length === 1 ? '' : 's'} pending.` : 'Review these subjects in your next session.'}</p><button className="secondary-btn notification-action-btn" onClick={() => navigateToPage('planner')}>View Planner</button></> : <><p className="muted">Add weak subjects in Profile to get focused recommendations.</p><button className="secondary-btn notification-action-btn" onClick={() => navigateToPage('profile')}>Open Profile</button></>}
+            {weakSubjects.length > 0 ? <><div className="focus-subject-list">{weakSubjects.map((subject) => <span className="focus-subject" key={subject}>{subject}</span>)}</div><p className="focus-subject-description">{weakSubjectTasks.length ? `${weakSubjectTasks.length} related task${weakSubjectTasks.length === 1 ? '' : 's'} pending.` : 'Review these subjects in your next session.'}</p><button className="secondary-btn notification-action-btn" onClick={() => navigateToPage('planner')}>View Planner</button></> : <><p className="muted focus-subject-description">Add weak subjects in Profile to get focused recommendations.</p><button className="secondary-btn notification-action-btn" onClick={() => navigateToPage('profile')}>Open Profile</button></>}
           </section>
 
           <section className="card notification-card notification-exam">
@@ -3149,11 +3175,11 @@ function App() {
                 <div className="timer-display" style={{ margin: '18px 0' }}>{formatTimeDisplay(timerSeconds)}</div>
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
                   {!timerRunning ? (
-                    <button className="primary-btn" onClick={startTimer}>Start</button>
+                    <button className={timerSeconds > 0 ? 'secondary-btn' : 'primary-btn'} onClick={startTimer}>{timerSeconds > 0 ? '▶ Resume' : '▶ Start'}</button>
                   ) : (
-                    <button className="secondary-btn" onClick={pauseTimer}>Pause</button>
+                    <button className="secondary-btn" onClick={pauseTimer}>⏸ Pause</button>
                   )}
-                  <button className="ghost-btn" onClick={startTimer}>Resume</button>
+                  <button className="ghost-btn timer-reset-btn" onClick={resetTimer}>↻ Reset</button>
                   <button className="ghost-btn" onClick={openFullScreenMode}>Full Screen</button>
                   <button className="danger-btn" onClick={handleTimerFinish}>Finish Session</button>
                 </div>
@@ -3164,7 +3190,17 @@ function App() {
           {fullScreen && timerOnlyMode && (
             <div className="timer-only-backdrop">
               <button className="icon-btn timer-only-back-btn" onClick={returnFromFullscreenToFocusMode} aria-label="Back to Focus Mode" title="Back to Focus Mode">←</button>
-              <div className="timer-only-display">{formatTimeDisplay(timerSeconds)}</div>
+              <div className="timer-only-content">
+                <div className="timer-only-display">{formatTimeDisplay(timerSeconds)}</div>
+                <button
+                  className="timer-only-control"
+                  onClick={timerRunning ? pauseTimer : startTimer}
+                  aria-label={timerRunning ? 'Pause timer' : timerSeconds > 0 ? 'Resume timer' : 'Start timer'}
+                  title={timerRunning ? 'Pause timer' : timerSeconds > 0 ? 'Resume timer' : 'Start timer'}
+                >
+                  {timerRunning ? '⏸' : '▶'}
+                </button>
+              </div>
             </div>
           )}
 
@@ -3178,11 +3214,11 @@ function App() {
                 <div className="timer-display" style={{ margin: '18px 0' }}>{formatTimeDisplay(timerSeconds)}</div>
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
                   {!timerRunning ? (
-                    <button className="primary-btn" onClick={startTimer}>Start</button>
+                    <button className={timerSeconds > 0 ? 'secondary-btn' : 'primary-btn'} onClick={startTimer}>{timerSeconds > 0 ? '▶ Resume' : '▶ Start'}</button>
                   ) : (
-                    <button className="secondary-btn" onClick={pauseTimer}>Pause</button>
+                    <button className="secondary-btn" onClick={pauseTimer}>⏸ Pause</button>
                   )}
-                  <button className="ghost-btn" onClick={startTimer}>Resume</button>
+                  <button className="ghost-btn timer-reset-btn" onClick={resetTimer}>↻ Reset</button>
                   <button className="ghost-btn" onClick={openFullScreenMode}>Full Screen</button>
                   <button className="danger-btn" onClick={handleTimerFinish}>Finish Session</button>
                 </div>
