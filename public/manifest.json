@@ -45,14 +45,14 @@
   "screenshots": [
     {
       "src": "/screenshots/edume-mobile.png",
-      "sizes": "390x844",
+      "sizes": "488x1055",
       "type": "image/png",
       "form_factor": "narrow",
       "label": "EduMe mobile study planner"
     },
     {
       "src": "/screenshots/edume-desktop.png",
-      "sizes": "1365x768",
+      "sizes": "1706x960",
       "type": "image/png",
       "form_factor": "wide",
       "label": "EduMe desktop study planner"
