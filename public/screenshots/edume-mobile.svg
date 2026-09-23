@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="390" height="844" viewBox="0 0 390 844" role="img" aria-labelledby="title desc">
+  <title id="title">EduMe mobile study planner</title>
+  <desc id="desc">Mobile preview placeholder for the EduMe study planner app.</desc>
+  <rect width="390" height="844" rx="28" fill="#e8f0f5"/>
+  <rect x="16" y="18" width="358" height="72" rx="20" fill="#d7e5ed" stroke="#9fb8c8"/>
+  <rect x="32" y="34" width="40" height="40" rx="12" fill="#fff"/>
+  <text x="52" y="61" text-anchor="middle" font-family="Arial,sans-serif" font-size="24" font-weight="700" fill="#2563eb">E</text>
+  <text x="88" y="62" font-family="Arial,sans-serif" font-size="22" font-weight="700" fill="#102a43">EduMe</text>
+  <rect x="16" y="108" width="358" height="148" rx="22" fill="#f8fbfd" stroke="#b6cbd7"/>
+  <text x="34" y="143" font-family="Arial,sans-serif" font-size="13" font-weight="700" fill="#9a641e">A CALMER WAY TO PREPARE</text>
+  <text x="34" y="181" font-family="Arial,sans-serif" font-size="25" font-weight="700" fill="#102a43">Build a study</text>
+  <text x="34" y="211" font-family="Arial,sans-serif" font-size="25" font-weight="700" fill="#102a43">rhythm that lasts.</text>
+  <rect x="16" y="276" width="358" height="116" rx="18" fill="#dcecf0"/>
+  <text x="36" y="314" font-family="Arial,sans-serif" font-size="19" font-weight="700" fill="#143c55">Today&apos;s study plan</text>
+  <text x="36" y="346" font-family="Arial,sans-serif" font-size="15" fill="#486273">Plan tasks, focus sessions, and goals.</text>
+  <rect x="16" y="412" width="358" height="116" rx="18" fill="#eef3f8"/>
+  <text x="36" y="450" font-family="Arial,sans-serif" font-size="19" font-weight="700" fill="#143c55">Focus timer</text>
+  <text x="36" y="482" font-family="Arial,sans-serif" font-size="15" fill="#486273">Build consistent study momentum.</text>
+  <rect x="16" y="746" width="358" height="70" rx="22" fill="#d7e5ed" stroke="#9fb8c8"/>
+  <text x="78" y="788" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" font-weight="700" fill="#102a43">Home</text>
+  <text x="195" y="788" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" font-weight="700" fill="#102a43">Planner</text>
+  <text x="312" y="788" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" font-weight="700" fill="#102a43">Progress</text>
+</svg>

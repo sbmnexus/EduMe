@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1365" height="768" viewBox="0 0 1365 768" role="img" aria-labelledby="title desc">
+  <title id="title">EduMe desktop study planner</title>
+  <desc id="desc">Desktop preview placeholder for the EduMe study planner app.</desc>
+  <rect width="1365" height="768" fill="#dbe8ef"/>
+  <rect x="28" y="24" width="1309" height="76" rx="22" fill="#edf5f9" stroke="#9fb8c8"/>
+  <rect x="48" y="42" width="40" height="40" rx="12" fill="#fff"/>
+  <text x="68" y="70" text-anchor="middle" font-family="Arial,sans-serif" font-size="24" font-weight="700" fill="#2563eb">E</text>
+  <text x="105" y="70" font-family="Arial,sans-serif" font-size="23" font-weight="700" fill="#102a43">EduMe</text>
+  <rect x="28" y="124" width="258" height="612" rx="22" fill="#edf5f9" stroke="#9fb8c8"/>
+  <text x="58" y="180" font-family="Arial,sans-serif" font-size="20" font-weight="700" fill="#102a43">Study workspace</text>
+  <rect x="52" y="216" width="210" height="48" rx="12" fill="#d6e6ef"/><text x="78" y="247" font-family="Arial,sans-serif" font-size="16" fill="#143c55">Home</text>
+  <rect x="52" y="278" width="210" height="48" rx="12" fill="#d6e6ef"/><text x="78" y="309" font-family="Arial,sans-serif" font-size="16" fill="#143c55">Planner</text>
+  <rect x="52" y="340" width="210" height="48" rx="12" fill="#d6e6ef"/><text x="78" y="371" font-family="Arial,sans-serif" font-size="16" fill="#143c55">Quiz</text>
+  <rect x="52" y="402" width="210" height="48" rx="12" fill="#d6e6ef"/><text x="78" y="433" font-family="Arial,sans-serif" font-size="16" fill="#143c55">Progress</text>
+  <rect x="316" y="124" width="1021" height="612" rx="22" fill="#f8fbfd" stroke="#b6cbd7"/>
+  <text x="358" y="180" font-family="Arial,sans-serif" font-size="14" font-weight="700" fill="#9a641e">A CALMER WAY TO PREPARE</text>
+  <text x="358" y="232" font-family="Arial,sans-serif" font-size="40" font-weight="700" fill="#102a43">Build a study rhythm that lasts.</text>
+  <rect x="358" y="278" width="300" height="176" rx="18" fill="#dcecf0"/><text x="386" y="324" font-family="Arial,sans-serif" font-size="21" font-weight="700" fill="#143c55">Today&apos;s plan</text><text x="386" y="362" font-family="Arial,sans-serif" font-size="16" fill="#486273">Tasks and next actions</text>
+  <rect x="682" y="278" width="300" height="176" rx="18" fill="#eef3f8"/><text x="710" y="324" font-family="Arial,sans-serif" font-size="21" font-weight="700" fill="#143c55">Focus timer</text><text x="710" y="362" font-family="Arial,sans-serif" font-size="16" fill="#486273">Focused sessions</text>
+  <rect x="1006" y="278" width="290" height="176" rx="18" fill="#e8f2e5"/><text x="1034" y="324" font-family="Arial,sans-serif" font-size="21" font-weight="700" fill="#143c55">Progress</text><text x="1034" y="362" font-family="Arial,sans-serif" font-size="16" fill="#486273">Goals and streaks</text>
+</svg>

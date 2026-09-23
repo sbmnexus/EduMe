@@ -1,15 +1,33 @@
 {
-  "name": "EduMe - Student Study Planner",
+  "name": "EduMe - Student Study Planner | Shiv Bibhuti Mishra | SBM",
   "short_name": "EduMe",
-  "description": "A modern student study planner and focus app.",
+  "lang": "en-IN",
+  "dir": "ltr",
+  "description": "EduMe is a free student study planner for organizing tasks, study time, goals, focus sessions, quizzes, and revision.",
   "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
   "orientation": "any",
   "background_color": "#f8fafc",
   "theme_color": "#2563eb",
   "prefer_related_applications": false,
+  "categories": ["education", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Open Planner",
+      "short_name": "Planner",
+      "url": "/?page=planner",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Start Focus Session",
+      "short_name": "Focus",
+      "url": "/?page=home",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ],
   "icons": [
     {
       "src": "/icon-192.png",
@@ -22,6 +40,22 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/edume-mobile.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "EduMe mobile study planner"
+    },
+    {
+      "src": "/screenshots/edume-desktop.png",
+      "sizes": "1365x768",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "EduMe desktop study planner"
     }
   ]
 }
