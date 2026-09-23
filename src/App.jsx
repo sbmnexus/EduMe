@@ -22,6 +22,7 @@ const STORAGE_KEYS = {
 };
 
 const APP_VERSION = '1.1';
+const NOTIFICATION_COOLDOWN_MS = 30 * 60 * 1000;
 
 const defaultProfile = {
   name: '',
@@ -149,6 +150,11 @@ async function showEduMeNotification(title, options) {
     console.error('Browser notification failed:', error);
     return false;
   }
+}
+
+function notificationCooldownPassed(storageKey) {
+  const lastShownAt = Number(readStorage(storageKey, 0));
+  return !Number.isFinite(lastShownAt) || Date.now() - lastShownAt >= NOTIFICATION_COOLDOWN_MS;
 }
 
 function recoverActiveTimer() {
@@ -717,7 +723,7 @@ function App() {
 
     const sendReminder = async () => {
       const today = getCurrentDateKey();
-      if (readStorage(STORAGE_KEYS.notificationLastShown, '') === today) return;
+      if (!notificationCooldownPassed(STORAGE_KEYS.notificationLastShown)) return;
       const tomorrow = new Date(`${today}T00:00:00`);
       tomorrow.setDate(tomorrow.getDate() + 1);
       const tomorrowKey = buildDateKey(tomorrow);
@@ -732,9 +738,10 @@ function App() {
       const shown = await showEduMeNotification('EduMe Notification Reminder', {
         body: `${taskNotice}${upcomingNotice}${examNotice}`,
         icon: '/icon-192.png',
-        tag: 'edume-notification-reminder',
+        tag: `edume-notification-reminder-${Date.now()}`,
+        renotify: true,
       });
-      if (shown) writeStorage(STORAGE_KEYS.notificationLastShown, today);
+      if (shown) writeStorage(STORAGE_KEYS.notificationLastShown, Date.now());
     };
 
     sendReminder();
@@ -748,7 +755,7 @@ function App() {
 
     const sendStudyReminder = async () => {
       const today = getCurrentDateKey();
-      if (readStorage(STORAGE_KEYS.studyReminderLastShown, '') === today) return;
+      if (!notificationCooldownPassed(STORAGE_KEYS.studyReminderLastShown)) return;
 
       const pendingTodayTasks = todayTasks.filter((task) => !task.completed).length;
       const remainingGoalMinutes = Math.max(0, todayGoalMinutes - todaysMinutes);
@@ -771,9 +778,10 @@ function App() {
       const shown = await showEduMeNotification('EduMe Study Reminder', {
         body: `${taskMessage} ${goalMessage} ${streakMessage} ${quizMessage}`.trim(),
         icon: '/icon-192.png',
-        tag: 'edume-study-reminder',
+        tag: `edume-study-reminder-${Date.now()}`,
+        renotify: true,
       });
-      if (shown) writeStorage(STORAGE_KEYS.studyReminderLastShown, today);
+      if (shown) writeStorage(STORAGE_KEYS.studyReminderLastShown, Date.now());
     };
 
     sendStudyReminder();
@@ -1347,16 +1355,13 @@ function App() {
       triggerToast('Please enter your name.');
       return;
     }
-    if (profile.targetExam === 'OTHER' && !profile.customExamName?.trim()) {
-      triggerToast('Please enter your exam name.');
+    if (!profile.targetExam?.trim()) {
+      triggerToast('Please enter your target exam.');
       return;
     }
     if (profile.examDate && profile.examDate < getCurrentDateKey()) {
       triggerToast('Exam date should be today or later.');
       return;
-    }
-    if (profile.targetExam === 'OTHER') {
-      setProfile((current) => ({ ...current, targetExam: current.customExamName.trim(), customExamName: '' }));
     }
     triggerToast('✓ Profile Updated');
     setPage('home');
@@ -1903,16 +1908,9 @@ function App() {
           </div>
           <div>
             <label className="muted" style={{ display: 'block', marginBottom: 8 }}>Target Exam</label>
-            <select className="select" value={profile.targetExam} onChange={(e) => setProfile((current) => ({ ...current, targetExam: e.target.value, customExamName: e.target.value === 'OTHER' ? current.customExamName : '' }))}>
-              <option value="" disabled>Select your exam</option><option>JEE MAINS & ADVANCE</option><option>NEET</option><option>BOARDS</option><option>UPSC</option><option>NDA</option><option>SSC</option><option>CUET</option><option>CA</option><option>OTHER</option>
-            </select>
-          </div>
-          {profile.targetExam === 'OTHER' && (
-            <div>
-              <label className="muted" style={{ display: 'block', marginBottom: 8 }}>Your Exam Name</label>
-              <input className="input" value={profile.customExamName} onChange={(e) => setProfile((current) => ({ ...current, customExamName: e.target.value }))} placeholder="Enter your exam name" />
+            <input className="input" value={profile.targetExam} onChange={(e) => setProfile((current) => ({ ...current, targetExam: e.target.value, customExamName: '' }))} placeholder="Enter your target exam" />
+            <small className="muted">Enter the exam name yourself. Quiz questions are available for supported exams only.</small>
             </div>
-          )}
           <div>
             <label className="muted" style={{ display: 'block', marginBottom: 8 }}>Exam Date</label>
             <input className="input" type="date" value={profile.examDate} onChange={(e) => setProfile((current) => ({ ...current, examDate: e.target.value }))} aria-label="Select Your Exam Date" />
@@ -2611,7 +2609,7 @@ function App() {
               <li>App: <button className="about-app-name-link" onClick={() => openUtilityPage('about-details')} aria-label="Open detailed information about EduMe">EduMe</button></li>
               <li>Version: <button className="version-link" onClick={() => openUtilityPage('whats-new')}>v1.1</button></li>
               <li>Type: Student Study App</li>
-              <li className="about-developer-item"><span>Designed &amp; Developed by</span><button className="developer-link about-developer-link" onClick={() => setDeveloperModalOpen(true)}>Shiv Bibhuti Mishra (SBM)</button></li>
+              <li className="about-developer-item"><span>Designed &amp; Developed by</span><button className="developer-link about-developer-link" onClick={() => setDeveloperModalOpen(true)}>Shiv Bibhuti Mishra | SBM</button></li>
             </ul>
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -2647,7 +2645,7 @@ function App() {
           <footer className="mobile-about-footer" aria-label="EduMe mobile footer">
             <span>© 2026 EduMe. All rights reserved.</span>
             <span>EduMe — Student Study Planner</span>
-            <span>Developed with ❤️ by <button className="developer-link" onClick={() => setDeveloperModalOpen(true)}>Shiv Bibhuti Mishra</button> | Brand: SBM</span>
+            <span>Developed with ❤️ by <button className="developer-link" onClick={() => setDeveloperModalOpen(true)}>Shiv Bibhuti Mishra | SBM</button></span>
           </footer>
         </div>
       </div>
@@ -3030,7 +3028,7 @@ function App() {
                   <div className="app-footer__meta">© 2026 EduMe. All rights reserved.</div>
                   <div className="app-footer__credit">
                     <span>EduMe — Student Study Planner</span>
-                    <span>Developed with ❤️ by <button className="developer-link" onClick={() => setDeveloperModalOpen(true)}>Shiv Bibhuti Mishra</button> | Brand: SBM</span>
+                    <span>Developed with ❤️ by <button className="developer-link" onClick={() => setDeveloperModalOpen(true)}>Shiv Bibhuti Mishra | SBM</button></span>
                   </div>
                 </footer>
               </div>
@@ -3263,7 +3261,7 @@ function App() {
                 <button className="icon-btn developer-modal-close" onClick={() => setDeveloperModalOpen(false)} aria-label="Close developer profile" title="Close">×</button>
                 <img className="developer-modal-avatar" src={`${import.meta.env.BASE_URL}image-1789912580558.jpeg`} alt="Shiv Bibhuti Mishra" />
                 <span className="section-kicker">THE CREATOR BEHIND EDUME</span>
-                <h2 id="developer-modal-title">Shiv Bibhuti Mishra (SBM)</h2>
+                <h2 id="developer-modal-title">Shiv Bibhuti Mishra | SBM</h2>
                 <h3>Creator of EduMe | Web Developer</h3>
                 <p className="developer-modal-bio">Building EduMe 🚀 | Student &amp; Developer 📚<br />Learning • Building • Improving ✨<br />Turning ideas into useful projects.</p>
                 <div className="developer-social-links" aria-label="Developer social links">

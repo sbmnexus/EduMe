@@ -1,8 +1,8 @@
-const CACHE_NAME = 'EduMe-v1.1.4';
+const CACHE_NAME = 'EduMe-v1.1.5';
 const APP_SHELL = [
   '/',
   '/index.html',
-  '/manifest.webmanifest',
+  '/manifest.json',
   '/icon-192.png',
   '/icon-512.png',
   '/questions.json',
