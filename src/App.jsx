@@ -1809,7 +1809,7 @@ function App() {
         ) : (
           <div>
             {selectedTasks.map((task) => (
-              <div className="task-item" key={task.id}>
+              <div className={`task-item ${task.completed ? 'task-item-completed' : ''}`} key={task.id}>
                 <div className="task-main">
                   <button className={`check-box ${task.completed ? 'checked' : ''}`} onClick={() => toggleTaskComplete(task.id)} />
                   <div>
@@ -1841,7 +1841,7 @@ function App() {
               <div>
                 <h4 style={{ margin: '0 0 10px' }}>Active Goals</h4>
                 {activeGoals.map((goal) => (
-                  <div key={goal.id} className="card" style={{ padding: 14, marginBottom: 12 }}>
+                  <div key={goal.id} className={`card goal-card ${goal.completed ? 'goal-card-completed' : ''}`} style={{ padding: 14, marginBottom: 12 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
                       <div>
                         <strong>{goal.name}</strong>
@@ -1867,7 +1867,7 @@ function App() {
               <div>
                 <h4 style={{ margin: '0 0 10px' }}>Completed Goals</h4>
                 {completedGoals.map((goal) => (
-                  <div key={goal.id} className="card" style={{ padding: 14, marginBottom: 12, opacity: 0.8 }}>
+                  <div key={goal.id} className="card goal-card goal-card-completed" style={{ padding: 14, marginBottom: 12, opacity: 0.8 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
                       <div>
                         <strong>{goal.name}</strong>
@@ -2748,7 +2748,7 @@ function App() {
   );
 
   const renderTimerCard = () => (
-    <div className={`card focus-timer-card ${timerLandscape ? 'timer-landscape' : ''}`}>
+    <div className={`card focus-timer-card ${timerLandscape ? 'timer-landscape' : ''} ${timerFinished ? 'timer-card-finished' : ''}`}>
       <div className="section-header">
         <div>
           <span className="section-kicker">FOCUS MODE</span>
@@ -3060,7 +3060,7 @@ function App() {
                   </div>
                 </div>
               )}
-              {renderContent()}
+              <div key={page} className="route-transition">{renderContent()}</div>
             </main>
           </div>
 
